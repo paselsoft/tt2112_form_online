@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { TT2112Data, INITIAL_DATA, RequestType, Gender, ValidationErrors } from '../types';
 import { generateTT2112PDF } from '../services/pdfService';
 import { PDF_TEMPLATE_URL } from '../services/embeddedTemplate';
-import { Download, User, MapPin, FileText, Bug, FileUp, Wand2, CheckCircle, Settings, Trash2, AlertCircle, Phone, Mail, Loader2 } from 'lucide-react';
+import { Download, User, MapPin, FileText, Bug, FileUp, Wand2, CheckCircle, Settings, Trash2, AlertCircle, Phone, Mail, Loader2, AlertTriangle } from 'lucide-react';
 
 const TT2112Form: React.FC = () => {
   const [formData, setFormData] = useState<TT2112Data>(INITIAL_DATA);
@@ -14,8 +14,12 @@ const TT2112Form: React.FC = () => {
   const [debugMode, setDebugMode] = useState(false);
   const [usingEmbedded, setUsingEmbedded] = useState(false);
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Cache key versioning to handle template updates
+  const CACHE_KEY = 'tt2112_template_v5';
 
   // --- LOCAL STORAGE PERSISTENCE HELPERS ---
   const fileToBase64 = (buffer: ArrayBuffer): string => {
@@ -41,8 +45,9 @@ const TT2112Form: React.FC = () => {
   // Load template logic
   useEffect(() => {
     const loadTemplate = async () => {
+        setFetchError(null);
         // 1. Check LocalStorage (Cache) first to save bandwidth
-        const cached = localStorage.getItem('tt2112_template_v1');
+        const cached = localStorage.getItem(CACHE_KEY);
         if (cached) {
             try {
                 const buffer = base64ToArrayBuffer(cached);
@@ -50,7 +55,7 @@ const TT2112Form: React.FC = () => {
                 return; 
             } catch (e) {
                 console.error("Errore caricamento cache", e);
-                localStorage.removeItem('tt2112_template_v1');
+                localStorage.removeItem(CACHE_KEY);
             }
         }
 
@@ -59,7 +64,9 @@ const TT2112Form: React.FC = () => {
             setIsLoadingTemplate(true);
             try {
                 const response = await fetch(PDF_TEMPLATE_URL);
-                if (!response.ok) throw new Error("Network response was not ok");
+                if (!response.ok) {
+                    throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
+                }
                 
                 const buffer = await response.arrayBuffer();
                 setPdfTemplate(buffer);
@@ -68,13 +75,13 @@ const TT2112Form: React.FC = () => {
                 // Cache it for next time
                 try {
                     const base64 = fileToBase64(buffer);
-                    localStorage.setItem('tt2112_template_v1', base64);
+                    localStorage.setItem(CACHE_KEY, base64);
                 } catch (e) {
                     console.warn("Could not cache downloaded PDF", e);
                 }
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Failed to fetch PDF from URL:", error);
-                // Don't alert here to avoid annoying popup on load, just show manual upload UI
+                setFetchError("Impossibile scaricare il modello automatico. Assicurati che il repository GitHub sia PUBBLICO.");
             } finally {
                 setIsLoadingTemplate(false);
             }
@@ -145,11 +152,12 @@ const TT2112Form: React.FC = () => {
             const arrayBuffer = await file.arrayBuffer();
             setPdfTemplate(arrayBuffer);
             setUsingEmbedded(false);
+            setFetchError(null);
             
             // Save to LocalStorage
             try {
                 const base64 = fileToBase64(arrayBuffer);
-                localStorage.setItem('tt2112_template_v1', base64);
+                localStorage.setItem(CACHE_KEY, base64);
             } catch (storageErr) {
                 console.warn("Impossibile salvare in cache (file troppo grande?)", storageErr);
                 alert("Nota: Il file è stato caricato ma è troppo grande per essere salvato in memoria per la prossima volta.");
@@ -163,10 +171,13 @@ const TT2112Form: React.FC = () => {
   };
 
   const handleResetTemplate = () => {
-      if (confirm("Vuoi rimuovere il modello salvato e caricarne uno nuovo?")) {
+      if (confirm("Vuoi rimuovere il modello salvato e riprovare il download automatico?")) {
           setPdfTemplate(null);
-          localStorage.removeItem('tt2112_template_v1');
+          localStorage.removeItem(CACHE_KEY);
           setUsingEmbedded(false);
+          setFetchError(null);
+          // Reload page to trigger useEffect again properly or just let user upload
+          window.location.reload();
       }
   };
 
@@ -288,7 +299,7 @@ const TT2112Form: React.FC = () => {
                 
                 {/* UPLOAD / LOADING SECTION */}
                 {!pdfTemplate ? (
-                    <div className="p-6 rounded-xl border-2 border-dashed border-blue-300 bg-blue-50 text-center relative overflow-hidden">
+                    <div className={`p-6 rounded-xl border-2 border-dashed ${fetchError ? 'border-red-300 bg-red-50' : 'border-blue-300 bg-blue-50'} text-center relative overflow-hidden transition-colors`}>
                         {isLoadingTemplate && (
                             <div className="absolute inset-0 bg-white/80 flex flex-col items-center justify-center z-10 backdrop-blur-sm">
                                 <Loader2 size={32} className="text-blue-600 animate-spin mb-2" />
@@ -297,15 +308,19 @@ const TT2112Form: React.FC = () => {
                         )}
                         
                         <div className="mb-3 flex justify-center">
-                            <div className="p-3 bg-blue-100 rounded-full">
-                                <FileUp size={24} className="text-blue-600" />
+                            <div className={`p-3 rounded-full ${fetchError ? 'bg-red-100' : 'bg-blue-100'}`}>
+                                {fetchError ? <AlertTriangle size={24} className="text-red-600" /> : <FileUp size={24} className="text-blue-600" />}
                             </div>
                         </div>
-                        <h3 className="text-sm font-bold text-blue-900 mb-1">Carica Modello TT2112</h3>
-                        <p className="text-xs text-blue-700 mb-4 px-8">
-                            {PDF_TEMPLATE_URL 
-                                ? "Impossibile scaricare il modello automatico. Carica il file manualmente." 
-                                : "Carica il PDF vuoto del modello TT2112."}
+                        <h3 className={`text-sm font-bold ${fetchError ? 'text-red-900' : 'text-blue-900'} mb-1`}>
+                            {fetchError ? 'Errore Scaricamento' : 'Carica Modello TT2112'}
+                        </h3>
+                        <p className={`text-xs ${fetchError ? 'text-red-700' : 'text-blue-700'} mb-4 px-8`}>
+                            {fetchError 
+                                ? fetchError 
+                                : (PDF_TEMPLATE_URL 
+                                    ? "Download automatico in corso..." 
+                                    : "Carica il PDF vuoto del modello TT2112.")}
                         </p>
                         
                         <input 
@@ -319,7 +334,7 @@ const TT2112Form: React.FC = () => {
                             onClick={() => fileInputRef.current?.click()}
                             className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition-colors shadow-sm"
                         >
-                            Seleziona File PDF
+                            Carica Manualmente PDF
                         </button>
                     </div>
                 ) : (
@@ -331,7 +346,7 @@ const TT2112Form: React.FC = () => {
                             <div>
                                 <h3 className="text-sm font-bold text-green-900">Modello Pronto</h3>
                                 <p className="text-xs text-green-700">
-                                    {usingEmbedded ? 'Modello ufficiale caricato da remoto.' : 'Modello caricato dalla memoria locale.'}
+                                    {usingEmbedded ? 'Modello ufficiale scaricato.' : 'Modello caricato dalla memoria locale.'}
                                 </p>
                             </div>
                         </div>
