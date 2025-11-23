@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { TT2112Data, INITIAL_DATA, RequestType, Gender, ValidationErrors } from '../types';
 import { generateTT2112PDF } from '../services/pdfService';
 import { PDF_TEMPLATE_URL } from '../services/embeddedTemplate';
-import { Download, User, MapPin, FileText, Bug, FileUp, Wand2, CheckCircle, Settings, Trash2, AlertCircle, Phone, Mail, Loader2, AlertTriangle, Send } from 'lucide-react';
+import { Download, User, MapPin, FileText, Bug, FileUp, Wand2, CheckCircle, Settings, Trash2, AlertCircle, Phone, Mail, Loader2, AlertTriangle, Send, ExternalLink } from 'lucide-react';
 
 // Optimized helper for base64 conversion to avoid stack overflow or UI freeze with large files
 const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
@@ -85,7 +85,7 @@ const TT2112Form: React.FC = () => {
   
   // Email sending states
   const [isSendingEmail, setIsSendingEmail] = useState(false);
-  const [emailStatus, setEmailStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'success' | 'error' | 'manual_needed'>('idle');
   const [emailMessage, setEmailMessage] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -348,17 +348,26 @@ const TT2112Form: React.FC = () => {
              setEmailMessage("Pratica inviata correttamente all'ufficio!");
           } else {
              // Response is not JSON (likely HTML 404/500 from static host)
-             console.error("Non-JSON response received:", await response.text());
-             throw new Error("Il server non è raggiungibile (Endpoint API non trovato). Se sei su un hosting statico, questa funzione non è disponibile.");
+             throw new Error("API non disponibile.");
           }
 
       } catch (err: any) {
           console.error(err);
-          setEmailStatus('error');
-          setEmailMessage("Errore invio: " + err.message);
+          // If server fails, we switch to "manual" mode
+          setEmailStatus('manual_needed');
+          setEmailMessage("Il server di invio non è raggiungibile (hosting statico).");
+          
+          // Force download so user has the file
+          handleDownload();
       } finally {
           setIsSendingEmail(false);
       }
+  };
+
+  const getMailtoLink = () => {
+      const subject = encodeURIComponent(`Nuova Pratica TT2112: ${formData.cognome} ${formData.nome}`);
+      const body = encodeURIComponent(`Buongiorno,\n\nIn allegato la pratica TT2112 compilata.\n\nDati Richiedente:\n${formData.nome} ${formData.cognome}\nEmail: ${formData.email}\nTel: ${formData.telefono}\n\n(Ricorda di allegare il PDF appena scaricato)`);
+      return `mailto:paolo.selvaggini@mit.gov.it?subject=${subject}&body=${body}`;
   };
 
   return (
@@ -781,9 +790,9 @@ const TT2112Form: React.FC = () => {
 
                     <button
                         onClick={handleSendEmail}
-                        disabled={!pdfTemplate || isSendingEmail}
+                        disabled={!pdfTemplate || isSendingEmail || emailStatus === 'manual_needed'}
                         className={`py-3.5 rounded-xl font-bold shadow-lg text-sm transition-all flex items-center justify-center gap-2 ${
-                            pdfTemplate && !isSendingEmail
+                            pdfTemplate && !isSendingEmail && emailStatus !== 'manual_needed'
                             ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200' 
                             : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                         }`}
@@ -802,6 +811,25 @@ const TT2112Form: React.FC = () => {
                  {emailStatus === 'error' && (
                      <div className="p-3 bg-red-100 text-red-800 text-xs font-bold rounded-lg flex items-center gap-2 border border-red-200 animate-in fade-in slide-in-from-bottom-2">
                          <AlertCircle size={16} /> {emailMessage}
+                     </div>
+                 )}
+                 
+                 {/* FALLBACK MANUALE (IMPORTANTISSIMO PER HOSTING STATICI) */}
+                 {emailStatus === 'manual_needed' && (
+                     <div className="animate-in fade-in slide-in-from-bottom-2 space-y-2">
+                         <div className="p-3 bg-yellow-50 text-yellow-800 text-xs font-medium rounded-lg border border-yellow-200 flex items-start gap-2">
+                             <AlertTriangle size={16} className="shrink-0 mt-0.5" /> 
+                             <div>
+                                 <p className="font-bold mb-1">Server non raggiungibile</p>
+                                 <p>Non preoccuparti, il PDF è stato scaricato automaticamente. Puoi inviarlo con il tuo programma di posta.</p>
+                             </div>
+                         </div>
+                         <a 
+                             href={getMailtoLink()}
+                             className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-colors"
+                         >
+                             <Mail size={18} /> INVIA CON IL TUO CLIENT EMAIL <ExternalLink size={14} />
+                         </a>
                      </div>
                  )}
 
