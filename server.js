@@ -1,8 +1,14 @@
-import express from 'express';
-import nodemailer from 'nodemailer';
-import multer from 'multer';
-import path from 'path';
+import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
+
+// Usiamo createRequire per importare le librerie backend.
+// Questo "nasconde" le dipendenze allo scanner automatico del deployment,
+// impedendo che vengano iniettate erroneamente nel file index.html del frontend.
+const require = createRequire(import.meta.url);
+const path = require('path');
+const express = require('express');
+const nodemailer = require('nodemailer');
+const multer = require('multer');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
