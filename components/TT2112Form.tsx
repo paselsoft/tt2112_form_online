@@ -1,9 +1,76 @@
-
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { TT2112Data, INITIAL_DATA, RequestType, Gender, ValidationErrors } from '../types';
 import { generateTT2112PDF } from '../services/pdfService';
 import { PDF_TEMPLATE_URL } from '../services/embeddedTemplate';
-import { Download, User, MapPin, FileText, Bug, FileUp, Wand2, CheckCircle, Settings, Trash2, AlertCircle, Phone, Mail, Loader2, AlertTriangle } from 'lucide-react';
+import { Download, User, MapPin, FileText, Bug, FileUp, Wand2, CheckCircle, Settings, Trash2, AlertCircle, Phone, Mail, Loader2, AlertTriangle, Send } from 'lucide-react';
+
+// Optimized helper for base64 conversion to avoid stack overflow or UI freeze with large files
+const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const len = bytes.byteLength;
+  const CHUNK_SIZE = 0x8000; // 32KB chunks
+  for (let i = 0; i < len; i += CHUNK_SIZE) {
+    binary += String.fromCharCode.apply(
+      null, 
+      Array.from(bytes.subarray(i, Math.min(i + CHUNK_SIZE, len)))
+    );
+  }
+  return window.btoa(binary);
+};
+
+const base64ToArrayBuffer = (base64: string): ArrayBuffer => {
+  const binary_string = window.atob(base64);
+  const len = binary_string.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binary_string.charCodeAt(i);
+  }
+  return bytes.buffer;
+};
+
+// Extracted and Memoized InputField component
+interface InputFieldProps {
+  label: string;
+  name: string;
+  value: string;
+  error?: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder?: string;
+  maxLength?: number;
+  width?: string;
+}
+
+const InputField = React.memo<InputFieldProps>(({ 
+  label, 
+  name, 
+  value, 
+  error, 
+  onChange, 
+  placeholder, 
+  maxLength, 
+  width = "w-full" 
+}) => (
+  <div className={width}>
+    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+      {label} {error && <span className="text-red-600 normal-case ml-1">({error})</span>}
+    </label>
+    <input
+      type="text"
+      name={name}
+      value={value || ''}
+      onChange={onChange}
+      maxLength={maxLength}
+      autoComplete="off"
+      className={`w-full px-3 py-2.5 rounded-lg outline-none transition-all shadow-sm uppercase font-bold text-sm bg-white text-slate-800 placeholder-slate-300 ${
+        error 
+          ? 'border border-red-400 focus:ring-2 focus:ring-red-100' 
+          : 'border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-50'
+      }`}
+      placeholder={placeholder}
+    />
+  </div>
+));
 
 const TT2112Form: React.FC = () => {
   const [formData, setFormData] = useState<TT2112Data>(INITIAL_DATA);
@@ -16,34 +83,20 @@ const TT2112Form: React.FC = () => {
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   
+  // Email sending states
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [emailMessage, setEmailMessage] = useState('');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Cache key versioning to handle template updates
-  const CACHE_KEY = 'tt2112_template_v5';
-
-  // --- LOCAL STORAGE PERSISTENCE HELPERS ---
-  const fileToBase64 = (buffer: ArrayBuffer): string => {
-    let binary = '';
-    const bytes = new Uint8Array(buffer);
-    const len = bytes.byteLength;
-    for (let i = 0; i < len; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    return window.btoa(binary);
-  };
-
-  const base64ToArrayBuffer = (base64: string): ArrayBuffer => {
-    const binary_string = window.atob(base64);
-    const len = binary_string.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binary_string.charCodeAt(i);
-    }
-    return bytes.buffer;
-  };
+  // Cache key versioning to handle template updates - BUMPED TO V25
+  const CACHE_KEY = 'tt2112_template_v25';
 
   // Load template logic
   useEffect(() => {
+    let isMounted = true;
+
     const loadTemplate = async () => {
         setFetchError(null);
         // 1. Check LocalStorage (Cache) first to save bandwidth
@@ -51,7 +104,7 @@ const TT2112Form: React.FC = () => {
         if (cached) {
             try {
                 const buffer = base64ToArrayBuffer(cached);
-                setPdfTemplate(buffer);
+                if (isMounted) setPdfTemplate(buffer);
                 return; 
             } catch (e) {
                 console.error("Errore caricamento cache", e);
@@ -61,7 +114,7 @@ const TT2112Form: React.FC = () => {
 
         // 2. If no cache, check if URL is provided
         if (PDF_TEMPLATE_URL && PDF_TEMPLATE_URL.startsWith('http')) {
-            setIsLoadingTemplate(true);
+            if (isMounted) setIsLoadingTemplate(true);
             try {
                 const response = await fetch(PDF_TEMPLATE_URL);
                 if (!response.ok) {
@@ -69,29 +122,33 @@ const TT2112Form: React.FC = () => {
                 }
                 
                 const buffer = await response.arrayBuffer();
-                setPdfTemplate(buffer);
-                setUsingEmbedded(true); // Mark as "official" template
+                
+                if (isMounted) {
+                    setPdfTemplate(buffer);
+                    setUsingEmbedded(true); // Mark as "official" template
+                }
                 
                 // Cache it for next time
                 try {
-                    const base64 = fileToBase64(buffer);
+                    const base64 = arrayBufferToBase64(buffer);
                     localStorage.setItem(CACHE_KEY, base64);
                 } catch (e) {
                     console.warn("Could not cache downloaded PDF", e);
                 }
             } catch (error: any) {
                 console.error("Failed to fetch PDF from URL:", error);
-                setFetchError("Impossibile scaricare il modello automatico. Assicurati che il repository GitHub sia PUBBLICO.");
+                if (isMounted) setFetchError("Impossibile scaricare il modello automatico. Assicurati che il repository GitHub sia PUBBLICO.");
             } finally {
-                setIsLoadingTemplate(false);
+                if (isMounted) setIsLoadingTemplate(false);
             }
         }
     };
 
     loadTemplate();
+    return () => { isMounted = false; };
   }, []);
 
-  const validateField = (name: string, value: string): string => {
+  const validateField = useCallback((name: string, value: string): string => {
     switch (name) {
       case 'cognome':
       case 'nome':
@@ -125,21 +182,20 @@ const TT2112Form: React.FC = () => {
       default:
         return '';
     }
-  };
+  }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
 
-    const error = validateField(name, value);
     setErrors(prev => ({
         ...prev,
-        [name]: error
+        [name]: validateField(name, value)
     }));
-  };
+  }, [validateField]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -156,7 +212,7 @@ const TT2112Form: React.FC = () => {
             
             // Save to LocalStorage
             try {
-                const base64 = fileToBase64(arrayBuffer);
+                const base64 = arrayBufferToBase64(arrayBuffer);
                 localStorage.setItem(CACHE_KEY, base64);
             } catch (storageErr) {
                 console.warn("Impossibile salvare in cache (file troppo grande?)", storageErr);
@@ -176,7 +232,6 @@ const TT2112Form: React.FC = () => {
           localStorage.removeItem(CACHE_KEY);
           setUsingEmbedded(false);
           setFetchError(null);
-          // Reload page to trigger useEffect again properly or just let user upload
           window.location.reload();
       }
   };
@@ -247,26 +302,57 @@ const TT2112Form: React.FC = () => {
     }
   };
 
-  const InputField = ({ label, name, placeholder, maxLength, width = "w-full" }: any) => (
-    <div className={width}>
-      <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-        {label} {errors[name] && <span className="text-red-600 normal-case ml-1">({errors[name]})</span>}
-      </label>
-      <input
-        type="text"
-        name={name}
-        value={(formData as any)[name]}
-        onChange={handleChange}
-        maxLength={maxLength}
-        className={`w-full px-3 py-2.5 rounded-lg outline-none transition-all shadow-sm uppercase font-bold text-sm bg-white text-slate-800 placeholder-slate-300 ${
-          errors[name] 
-            ? 'border border-red-400 focus:ring-2 focus:ring-red-100' 
-            : 'border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-50'
-        }`}
-        placeholder={placeholder}
-      />
-    </div>
-  );
+  const handleSendEmail = async () => {
+      if (!pdfTemplate) {
+          alert("Attendi il caricamento del modello.");
+          return;
+      }
+      if (!formData.cognome || !formData.nome) {
+          alert("Per favore compila almeno Cognome e Nome.");
+          return;
+      }
+
+      setIsSendingEmail(true);
+      setEmailStatus('idle');
+      setEmailMessage('');
+
+      try {
+          const filledPdfBytes = await generateTT2112PDF(formData, pdfTemplate, { 
+              xOffset: Number(calibration.x), 
+              yOffset: Number(calibration.y),
+              showDebug: false
+          });
+          
+          const blob = new Blob([filledPdfBytes], { type: 'application/pdf' });
+          const formDataToSend = new FormData();
+          formDataToSend.append('pdf', blob, `TT2112_${formData.cognome}.pdf`);
+          formDataToSend.append('nome', formData.nome);
+          formDataToSend.append('cognome', formData.cognome);
+          if (formData.email) formDataToSend.append('emailUtente', formData.email);
+          if (formData.telefono) formDataToSend.append('telefono', formData.telefono);
+
+          const response = await fetch('/api/send-email', {
+              method: 'POST',
+              body: formDataToSend
+          });
+
+          const result = await response.json();
+
+          if (response.ok) {
+              setEmailStatus('success');
+              setEmailMessage("Pratica inviata correttamente all'ufficio!");
+          } else {
+              throw new Error(result.error || "Errore sconosciuto");
+          }
+
+      } catch (err: any) {
+          console.error(err);
+          setEmailStatus('error');
+          setEmailMessage("Errore invio: " + err.message);
+      } finally {
+          setIsSendingEmail(false);
+      }
+  };
 
   return (
     <div className="max-w-3xl mx-auto pb-10">
@@ -312,7 +398,7 @@ const TT2112Form: React.FC = () => {
                                 {fetchError ? <AlertTriangle size={24} className="text-red-600" /> : <FileUp size={24} className="text-blue-600" />}
                             </div>
                         </div>
-                        <h3 className={`text-sm font-bold ${fetchError ? 'text-red-900' : 'text-blue-900'} mb-1`}>
+                        <h3 className="text-sm font-bold text-blue-900 mb-1">
                             {fetchError ? 'Errore Scaricamento' : 'Carica Modello TT2112'}
                         </h3>
                         <p className={`text-xs ${fetchError ? 'text-red-700' : 'text-blue-700'} mb-4 px-8`}>
@@ -369,8 +455,22 @@ const TT2112Form: React.FC = () => {
                             <User size={16} /> Dati Anagrafici
                         </h3>
                         <div className="grid grid-cols-2 gap-4">
-                            <InputField label="Cognome" name="cognome" placeholder="ROSSI" />
-                            <InputField label="Nome" name="nome" placeholder="MARIO" />
+                            <InputField 
+                              label="Cognome" 
+                              name="cognome" 
+                              value={formData.cognome} 
+                              error={errors.cognome} 
+                              onChange={handleChange} 
+                              placeholder="ROSSI" 
+                            />
+                            <InputField 
+                              label="Nome" 
+                              name="nome" 
+                              value={formData.nome} 
+                              error={errors.nome} 
+                              onChange={handleChange} 
+                              placeholder="MARIO" 
+                            />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                              <div>
@@ -385,19 +485,59 @@ const TT2112Form: React.FC = () => {
                                     <option value={Gender.F}>F</option>
                                 </select>
                              </div>
-                             <InputField label="Data Nascita" name="dataNascita" placeholder="GG/MM/AAAA" maxLength={10} />
+                             <InputField 
+                                label="Data Nascita" 
+                                name="dataNascita" 
+                                value={formData.dataNascita} 
+                                error={errors.dataNascita} 
+                                onChange={handleChange} 
+                                placeholder="GG/MM/AAAA" 
+                                maxLength={10} 
+                             />
                         </div>
                         <div className="grid grid-cols-3 gap-3">
                             <div className="col-span-2">
-                                <InputField label="Comune Nascita" name="luogoNascita" />
+                                <InputField 
+                                  label="Comune Nascita" 
+                                  name="luogoNascita" 
+                                  value={formData.luogoNascita} 
+                                  error={errors.luogoNascita} 
+                                  onChange={handleChange} 
+                                />
                             </div>
-                            <InputField label="Prov." name="provinciaNascita" maxLength={2} />
+                            <InputField 
+                              label="Prov." 
+                              name="provinciaNascita" 
+                              value={formData.provinciaNascita} 
+                              error={errors.provinciaNascita} 
+                              onChange={handleChange} 
+                              maxLength={2} 
+                            />
                         </div>
                          <div className="grid grid-cols-2 gap-4">
-                            <InputField label="Stato Nascita" name="statoNascita" />
-                            <InputField label="Cittadinanza" name="cittadinanza" />
+                            <InputField 
+                              label="Stato Nascita" 
+                              name="statoNascita" 
+                              value={formData.statoNascita} 
+                              error={errors.statoNascita} 
+                              onChange={handleChange} 
+                            />
+                            <InputField 
+                              label="Cittadinanza" 
+                              name="cittadinanza" 
+                              value={formData.cittadinanza} 
+                              error={errors.cittadinanza} 
+                              onChange={handleChange} 
+                            />
                         </div>
-                        <InputField label="Codice Fiscale" name="codiceFiscale" maxLength={16} />
+                        <InputField 
+                          label="Codice Fiscale" 
+                          name="codiceFiscale" 
+                          value={formData.codiceFiscale} 
+                          error={errors.codiceFiscale} 
+                          onChange={handleChange} 
+                          maxLength={16} 
+                        />
                     </div>
 
                     {/* Section 2 */}
@@ -407,20 +547,53 @@ const TT2112Form: React.FC = () => {
                         </h3>
                         <div className="grid grid-cols-3 gap-3">
                             <div className="col-span-2">
-                                <InputField label="Comune" name="residenzaComune" />
+                                <InputField 
+                                  label="Comune" 
+                                  name="residenzaComune" 
+                                  value={formData.residenzaComune} 
+                                  error={errors.residenzaComune} 
+                                  onChange={handleChange} 
+                                />
                             </div>
-                            <InputField label="Prov." name="residenzaProvincia" maxLength={2} />
+                            <InputField 
+                              label="Prov." 
+                              name="residenzaProvincia" 
+                              value={formData.residenzaProvincia} 
+                              error={errors.residenzaProvincia} 
+                              onChange={handleChange} 
+                              maxLength={2} 
+                            />
                         </div>
                         <div className="grid grid-cols-6 gap-3">
                             <div className="col-span-4">
-                                <InputField label="Indirizzo" name="residenzaVia" placeholder="VIA..." />
+                                <InputField 
+                                  label="Indirizzo" 
+                                  name="residenzaVia" 
+                                  value={formData.residenzaVia} 
+                                  error={errors.residenzaVia} 
+                                  onChange={handleChange} 
+                                  placeholder="VIA..." 
+                                />
                             </div>
                             <div className="col-span-2">
-                                <InputField label="N." name="residenzaNumero" />
+                                <InputField 
+                                  label="N." 
+                                  name="residenzaNumero" 
+                                  value={formData.residenzaNumero} 
+                                  error={errors.residenzaNumero} 
+                                  onChange={handleChange} 
+                                />
                             </div>
                         </div>
                         <div className="w-1/2">
-                            <InputField label="CAP" name="residenzaCap" maxLength={5} />
+                            <InputField 
+                              label="CAP" 
+                              name="residenzaCap" 
+                              value={formData.residenzaCap} 
+                              error={errors.residenzaCap} 
+                              onChange={handleChange} 
+                              maxLength={5} 
+                            />
                         </div>
                     </div>
 
@@ -431,10 +604,25 @@ const TT2112Form: React.FC = () => {
                         </h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="relative">
-                                <InputField label="Telefono" name="telefono" placeholder="333..." maxLength={15} />
+                                <InputField 
+                                  label="Telefono" 
+                                  name="telefono" 
+                                  value={formData.telefono || ''} 
+                                  error={errors.telefono} 
+                                  onChange={handleChange} 
+                                  placeholder="333..." 
+                                  maxLength={15} 
+                                />
                             </div>
                             <div className="relative">
-                                <InputField label="Email" name="email" placeholder="esempio@email.com" />
+                                <InputField 
+                                  label="Email" 
+                                  name="email" 
+                                  value={formData.email || ''} 
+                                  error={errors.email} 
+                                  onChange={handleChange} 
+                                  placeholder="esempio@email.com" 
+                                />
                             </div>
                         </div>
                         <p className="text-[10px] text-slate-400 italic">
@@ -470,21 +658,58 @@ const TT2112Form: React.FC = () => {
                         {formData.tipoRichiesta !== RequestType.NONE && (
                             <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3 animate-in fade-in">
                                 {formData.tipoRichiesta === RequestType.CONSEGUIMENTO && (
-                                    <InputField label="Categoria" name="categoriaRichiesta" placeholder="B" />
+                                    <InputField 
+                                      label="Categoria" 
+                                      name="categoriaRichiesta" 
+                                      value={formData.categoriaRichiesta} 
+                                      error={errors.categoriaRichiesta} 
+                                      onChange={handleChange} 
+                                      placeholder="B" 
+                                    />
                                 )}
                                 {formData.tipoRichiesta === RequestType.DUPLICATO && (
                                     <>
-                                        <InputField label="Categoria Posseduta" name="categoriaPosseduta" />
-                                        <InputField label="Numero Patente" name="estremiPatente" />
+                                        <InputField 
+                                          label="Categoria Posseduta" 
+                                          name="categoriaPosseduta" 
+                                          value={formData.categoriaPosseduta} 
+                                          error={errors.categoriaPosseduta} 
+                                          onChange={handleChange} 
+                                        />
+                                        <InputField 
+                                          label="Numero Patente" 
+                                          name="estremiPatente" 
+                                          value={formData.estremiPatente} 
+                                          error={errors.estremiPatente} 
+                                          onChange={handleChange} 
+                                        />
                                     </>
                                 )}
                                 {formData.tipoRichiesta === RequestType.RICLASSIFICAZIONE && (
                                     <>
                                         <div className="grid grid-cols-2 gap-3">
-                                            <InputField label="Da Cat." name="daCategoria" />
-                                            <InputField label="A Cat." name="aCategoria" />
+                                            <InputField 
+                                              label="Da Cat." 
+                                              name="daCategoria" 
+                                              value={formData.daCategoria} 
+                                              error={errors.daCategoria} 
+                                              onChange={handleChange} 
+                                            />
+                                            <InputField 
+                                              label="A Cat." 
+                                              name="aCategoria" 
+                                              value={formData.aCategoria} 
+                                              error={errors.aCategoria} 
+                                              onChange={handleChange} 
+                                            />
                                         </div>
-                                        <InputField label="Numero Patente" name="estremiPatente" />
+                                        <InputField 
+                                          label="Numero Patente" 
+                                          name="estremiPatente" 
+                                          value={formData.estremiPatente} 
+                                          error={errors.estremiPatente} 
+                                          onChange={handleChange} 
+                                        />
                                     </>
                                 )}
                             </div>
@@ -494,10 +719,10 @@ const TT2112Form: React.FC = () => {
             </div>
 
              {/* Footer Controls */}
-             <div className="p-4 bg-slate-50 border-t border-slate-200 shrink-0">
+             <div className="p-4 bg-slate-50 border-t border-slate-200 shrink-0 space-y-3">
                  <button 
                     onClick={() => setShowCalibration(!showCalibration)}
-                    className="w-full flex items-center justify-center gap-2 text-xs font-bold text-slate-500 hover:text-blue-600 mb-4 transition-colors"
+                    className="w-full flex items-center justify-center gap-2 text-xs font-bold text-slate-500 hover:text-blue-600 mb-2 transition-colors"
                  >
                     <Settings size={14} /> {showCalibration ? 'Chiudi Calibrazione' : 'Impostazioni di Stampa & Calibrazione'}
                  </button>
@@ -531,19 +756,48 @@ const TT2112Form: React.FC = () => {
                         </div>
                      </div>
                  )}
+                
+                 {/* ACTION BUTTONS */}
+                 <div className="grid grid-cols-2 gap-3">
+                    <button
+                        onClick={handleDownload}
+                        disabled={!pdfTemplate || isSendingEmail}
+                        className={`py-3.5 rounded-xl font-bold shadow-lg text-sm transition-all flex items-center justify-center gap-2 ${
+                            pdfTemplate && !isSendingEmail
+                            ? 'bg-white border-2 border-blue-600 text-blue-700 hover:bg-blue-50' 
+                            : 'bg-slate-200 text-slate-400 cursor-not-allowed border-2 border-transparent'
+                        }`}
+                    >
+                        {isLoadingTemplate ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+                        {isLoadingTemplate ? 'CARICAMENTO...' : 'SCARICA PDF'}
+                    </button>
 
-                 <button
-                    onClick={handleDownload}
-                    disabled={!pdfTemplate}
-                    className={`w-full py-3.5 rounded-xl font-bold shadow-lg text-sm transition-all flex items-center justify-center gap-2 ${
-                        pdfTemplate 
-                        ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200' 
-                        : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                    }`}
-                 >
-                    {isLoadingTemplate ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
-                    {isLoadingTemplate ? 'SCARICAMENTO MODELLO...' : 'SCARICA PDF COMPILATO'}
-                 </button>
+                    <button
+                        onClick={handleSendEmail}
+                        disabled={!pdfTemplate || isSendingEmail}
+                        className={`py-3.5 rounded-xl font-bold shadow-lg text-sm transition-all flex items-center justify-center gap-2 ${
+                            pdfTemplate && !isSendingEmail
+                            ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200' 
+                            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                        }`}
+                    >
+                        {isSendingEmail ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                        {isSendingEmail ? 'INVIO...' : 'INVIA AL MIT'}
+                    </button>
+                 </div>
+
+                 {/* EMAIL STATUS FEEDBACK */}
+                 {emailStatus === 'success' && (
+                     <div className="p-3 bg-green-100 text-green-800 text-xs font-bold rounded-lg flex items-center gap-2 border border-green-200 animate-in fade-in slide-in-from-bottom-2">
+                         <CheckCircle size={16} /> {emailMessage}
+                     </div>
+                 )}
+                 {emailStatus === 'error' && (
+                     <div className="p-3 bg-red-100 text-red-800 text-xs font-bold rounded-lg flex items-center gap-2 border border-red-200 animate-in fade-in slide-in-from-bottom-2">
+                         <AlertCircle size={16} /> {emailMessage}
+                     </div>
+                 )}
+
              </div>
       </div>
     </div>

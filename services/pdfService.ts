@@ -1,4 +1,4 @@
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { TT2112Data, RequestType } from "../types";
 
 // Helper to convert mm to points (1 mm = 2.835 points)
@@ -12,8 +12,11 @@ export const generateTT2112PDF = async (
   try {
     // Load the existing PDF
     const pdfDoc = await PDFDocument.load(existingPdfBytes);
-    // Courier Standard (not Bold) is usually better for fitting text in boxes
-    const courierFont = await pdfDoc.embedFont(StandardFonts.Courier);
+    
+    // USE STANDARD FONT (Helvetica) - Robust and requires no external fetching/fontkit
+    // This fixes "Unknown font format" and "String did not match expected pattern" errors
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
     const pages = pdfDoc.getPages();
 
     // BASE COORDINATES (Optimized for Page 2 / Index 1)
@@ -62,7 +65,7 @@ export const generateTT2112PDF = async (
             conseguimentoCheck: { x: 15, y: 161 },
             categoriaRichiesta: { x: 158, y: 161 },
             
-            // Heuristic estimates for other fields on Page 4 if needed (shifted similarly)
+            // Heuristic estimates for other fields on Page 4 if needed
             duplicatoCheck: { x: 18, y: 181 }, 
             duplicatoCat: { x: 138, y: 181 },
             riclassificazioneCheck: { x: 18, y: 194 },
@@ -95,7 +98,7 @@ export const generateTT2112PDF = async (
             conseguimentoCheck: { x: 15, y: 154 },
             categoriaRichiesta: { x: 158, y: 153 },
 
-            // Heuristics for bottom fields based on shifts
+            // Heuristics for bottom fields
             duplicatoCheck: { x: 18, y: 174 },
             duplicatoCat: { x: 138, y: 174 },
             riclassificazioneCheck: { x: 18, y: 187 },
@@ -128,7 +131,7 @@ export const generateTT2112PDF = async (
             conseguimentoCheck: { x: 15, y: 159 },
             categoriaRichiesta: { x: 158, y: 159 },
 
-            // Heuristics for bottom fields based on shifts relative to Conseguimento
+            // Heuristics for bottom fields
             duplicatoCheck: { x: 18, y: 179 }, 
             duplicatoCat: { x: 138, y: 179 },
             riclassificazioneCheck: { x: 18, y: 192 },
@@ -167,7 +170,7 @@ export const generateTT2112PDF = async (
               x: x,
               y: y + 5, // slightly above
               size: 6,
-              font: courierFont,
+              font: font,
               color: rgb(1, 0, 0), // RED
           });
       }
@@ -177,12 +180,12 @@ export const generateTT2112PDF = async (
       const textStr = text.toUpperCase();
 
       if (centered) {
-        const width = courierFont.widthOfTextAtSize(textStr, size);
+        const width = font.widthOfTextAtSize(textStr, size);
         page.drawText(textStr, {
             x: x - (width / 2),
             y: y,
             size: size,
-            font: courierFont,
+            font: font,
             color: rgb(0, 0, 0),
         });
       } else {
@@ -190,7 +193,7 @@ export const generateTT2112PDF = async (
             x: x,
             y: y,
             size: size,
-            font: courierFont,
+            font: font,
             color: rgb(0, 0, 0),
         });
       }
@@ -297,15 +300,12 @@ export const generateTT2112PDF = async (
         drawText(page7Idx, data.nome, {x: 63, y: 92}, FONT_SIZE);    
     }
 
-    // --- PAGE 14 (Privacy Consent) ---
-    // Logic removed as requested (page remains empty)
-    
     // Save the modified PDF
     const pdfBytes = await pdfDoc.save();
     return pdfBytes;
 
   } catch (error) {
     console.error("Error filling PDF:", error);
-    throw new Error("Impossibile compilare il PDF. Assicurati che sia il file TT2112 corretto.");
+    throw new Error("Impossibile compilare il PDF. Errore: " + (error as any).message);
   }
 };
