@@ -1,9 +1,12 @@
-import { createRequire } from 'module';
-import { fileURLToPath } from 'url';
 
-// Usiamo createRequire per importare le librerie backend.
-// Questo "nasconde" le dipendenze allo scanner automatico del deployment,
-// impedendo che vengano iniettate erroneamente nel file index.html del frontend.
+// ATTENZIONE: Usiamo import dinamici (await import) invece di statici.
+// Questo serve per "nascondere" le dipendenze Node.js (module, url) allo scanner 
+// automatico del deployment, che altrimenti le inietterebbe erroneamente in index.html,
+// rompendo il frontend.
+
+const { createRequire } = await import('module');
+const { fileURLToPath } = await import('url');
+
 const require = createRequire(import.meta.url);
 const path = require('path');
 const express = require('express');
