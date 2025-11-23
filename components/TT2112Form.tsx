@@ -336,13 +336,20 @@ const TT2112Form: React.FC = () => {
               body: formDataToSend
           });
 
-          const result = await response.json();
-
-          if (response.ok) {
-              setEmailStatus('success');
-              setEmailMessage("Pratica inviata correttamente all'ufficio!");
+          // Check for JSON content type
+          const contentType = response.headers.get("content-type");
+          
+          if (contentType && contentType.indexOf("application/json") !== -1) {
+             const result = await response.json();
+             if (!response.ok) {
+                 throw new Error(result.error || "Errore sconosciuto dal server");
+             }
+             setEmailStatus('success');
+             setEmailMessage("Pratica inviata correttamente all'ufficio!");
           } else {
-              throw new Error(result.error || "Errore sconosciuto");
+             // Response is not JSON (likely HTML 404/500 from static host)
+             console.error("Non-JSON response received:", await response.text());
+             throw new Error("Il server non è raggiungibile (Endpoint API non trovato). Se sei su un hosting statico, questa funzione non è disponibile.");
           }
 
       } catch (err: any) {
