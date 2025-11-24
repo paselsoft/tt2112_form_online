@@ -16,9 +16,9 @@ COPY . .
 # Esegue la build dell'applicazione React (crea la cartella 'dist')
 RUN npm run build
 
-# Copia esplicitamente comuni.json nella cartella dist
-# Vite dovrebbe farlo automaticamente, ma lo forziamo per sicurezza
-RUN cp public/comuni.json dist/comuni.json && ls -lh dist/comuni.json
+# Copia esplicitamente comuni.json nella cartella dist e nella root
+RUN cp public/comuni.json dist/comuni.json && cp public/comuni.json ./comuni.json
+RUN ls -lh dist/comuni.json && ls -lh ./comuni.json
 
 # Imposta la variabile d'ambiente PORT (necessaria per Cloud Run)
 ENV PORT=8080
