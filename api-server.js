@@ -47,8 +47,20 @@ console.log('[SYSTEM] Inizializzazione Server...');
     // 4. SERVING FRONTEND (Produzione)
     // Serve i file statici dalla cartella 'dist' generata da 'vite build'
     const distPath = path.join(__dirname, 'dist');
-    app.use(express.static(distPath));
     console.log(`[SYSTEM] Servendo file statici da: ${distPath}`);
+
+    // Debug: verifica esistenza comuni.json
+    const fs = require('fs');
+    const comuniPath = path.join(distPath, 'comuni.json');
+    if (fs.existsSync(comuniPath)) {
+      const stats = fs.statSync(comuniPath);
+      console.log(`[DEBUG] comuni.json trovato! Size: ${(stats.size / 1024 / 1024).toFixed(2)}MB`);
+    } else {
+      console.error(`[ERROR] comuni.json NON trovato in: ${comuniPath}`);
+      console.log(`[DEBUG] Contenuto di dist:`, fs.readdirSync(distPath));
+    }
+
+    app.use(express.static(distPath));
 
     // 5. ENDPOINT EMAIL
     app.post('/api/send-email', upload.single('pdf'), async (req, res) => {
