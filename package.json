@@ -6,7 +6,7 @@
     "dev": "node api-server.js & vite",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "node api-server.js"
+    "start": "vite build && node api-server.js"
   },
   "dependencies": {
     "express": "^4.19.2",
