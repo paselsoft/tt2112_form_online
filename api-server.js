@@ -2,6 +2,9 @@
 // api-server.js
 // Server Backend ottimizzato per Cloud Run e ambienti sicuri
 
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
+
 console.log('[SYSTEM] Inizializzazione Server...');
 
 // Funzione asincrona auto-eseguita per gestire l'avvio
@@ -10,7 +13,7 @@ console.log('[SYSTEM] Inizializzazione Server...');
     // 1. OFFUSCAMENTO IMPORTAZIONI
     // Usiamo createRequire per caricare i moduli CommonJS in un ambiente ES Module.
     // Spezziamo le stringhe per nascondere i nomi allo scanner del deployment che corrompe index.html
-    
+
     const _MOD = 'mo' + 'dule'; // Nasconde 'module'
     const { createRequire } = await import(_MOD);
     const require = createRequire(import.meta.url);
@@ -30,11 +33,11 @@ console.log('[SYSTEM] Inizializzazione Server...');
     // 2. CONFIGURAZIONE PATH
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
-    
+
     // 3. SETUP EXPRESS
     const app = express();
     const upload = multer({ storage: multer.memoryStorage() });
-    
+
     // Cloud Run inietta la porta via variabile d'ambiente PORT. Default 8080.
     const PORT = process.env.PORT || 8080;
 
@@ -60,23 +63,27 @@ console.log('[SYSTEM] Inizializzazione Server...');
 
         // Recupero Dati
         const { nome, cognome, emailUtente, telefono } = req.body;
-        
+
         // Recupero Credenziali (Secure)
         const emailUser = process.env.EMAIL_USER;
         const emailPass = process.env.EMAIL_PASS;
+        const emailHost = process.env.EMAIL_HOST || 'smtp.gmail.com';
+        const emailFrom = process.env.EMAIL_FROM || `"TT2112 Digitale" <${emailUser}>`;
 
         // Verifica Credenziali
         if (!emailUser || !emailPass) {
           console.error('[API ERROR] Variabili ambiente EMAIL_USER/EMAIL_PASS mancanti!');
           // Ritorniamo 503 Service Unavailable invece di 500 generico
-          return res.status(503).json({ 
-            error: 'Configurazione server incompleta. Contatta l\'amministratore.' 
+          return res.status(503).json({
+            error: 'Configurazione server incompleta. Contatta l\'amministratore.'
           });
         }
 
         // Configurazione Trasporto SMTP
         const transporter = nodemailer.createTransport({
-          service: 'gmail',
+          host: emailHost,
+          port: 465, // SSL
+          secure: true,
           auth: {
             user: emailUser,
             pass: emailPass,
@@ -85,7 +92,7 @@ console.log('[SYSTEM] Inizializzazione Server...');
 
         // Opzioni Email
         const mailOptions = {
-          from: `"TT2112 Digitale" <${emailUser}>`,
+          from: emailFrom,
           to: 'paolo.selvaggini@mit.gov.it', // Destinatario fisso
           replyTo: emailUtente || undefined,
           subject: `Nuova Pratica TT2112: ${cognome} ${nome}`,
@@ -101,21 +108,21 @@ console.log('[SYSTEM] Inizializzazione Server...');
 
         // Verifica connessione SMTP prima dell'invio
         try {
-            await transporter.verify();
-            console.log('[API] Connessione SMTP verificata');
+          await transporter.verify();
+          console.log('[API] Connessione SMTP verificata');
         } catch (verifyError) {
-            console.error('[API ERROR] Errore connessione SMTP:', verifyError);
-            return res.status(502).json({ error: 'Impossibile connettersi al server di posta (Gmail).' });
+          console.error('[API ERROR] Errore connessione SMTP:', verifyError);
+          return res.status(502).json({ error: 'Impossibile connettersi al server di posta (Gmail).' });
         }
 
         // Invio Effettivo
         const info = await transporter.sendMail(mailOptions);
         console.log(`[API] Email inviata con successo. ID: ${info.messageId}`);
-        
-        res.status(200).json({ 
-            success: true, 
-            message: 'Email inviata correttamente', 
-            id: info.messageId 
+
+        res.status(200).json({
+          success: true,
+          message: 'Email inviata correttamente',
+          id: info.messageId
         });
 
       } catch (error) {

@@ -23,4 +23,4 @@ ENV PORT=8080
 EXPOSE 8080
 
 # Avvia il server Node.js
-CMD ["node", "server.js"]
+CMD ["node", "api-server.js"]
