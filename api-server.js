@@ -44,6 +44,14 @@ console.log('[SYSTEM] Inizializzazione Server...');
     // Middleware per il parsing JSON (utile per debug o future espansioni)
     app.use(express.json());
 
+    // Middleware per assicurare che i file JSON vengano serviti correttamente
+    app.use((req, res, next) => {
+      if (req.path.endsWith('.json')) {
+        res.type('application/json');
+      }
+      next();
+    });
+
     // 4. SERVING FRONTEND (Produzione)
     // Serve i file statici dalla cartella 'dist' generata da 'vite build'
     const distPath = path.join(__dirname, 'dist');
