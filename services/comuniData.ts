@@ -50,11 +50,13 @@ export async function searchComuni(query: string, limit: number = 10): Promise<C
     }
 
     const comuni = await loadComuni();
+    // Normalize query to lowercase to handle uppercase input from form
     const normalizedQuery = query.toLowerCase().trim();
 
-    // Exact matches first, then starts-with, then contains
+    // Prioritize: exact matches > starts-with > word boundary > contains
     const exactMatches: Comune[] = [];
     const startsWithMatches: Comune[] = [];
+    const wordBoundaryMatches: Comune[] = [];
     const containsMatches: Comune[] = [];
 
     for (const comune of comuni) {
@@ -64,17 +66,20 @@ export async function searchComuni(query: string, limit: number = 10): Promise<C
             exactMatches.push(comune);
         } else if (normalizedName.startsWith(normalizedQuery)) {
             startsWithMatches.push(comune);
+        } else if (normalizedName.includes(' ' + normalizedQuery)) {
+            // Word boundary match (e.g., "San Roma" matches "roma")
+            wordBoundaryMatches.push(comune);
         } else if (normalizedName.includes(normalizedQuery)) {
             containsMatches.push(comune);
         }
 
-        // Stop if we have enough results
-        if (exactMatches.length + startsWithMatches.length + containsMatches.length >= limit * 2) {
+        // Early exit if we have enough high-quality results
+        if (exactMatches.length + startsWithMatches.length >= limit) {
             break;
         }
     }
 
-    return [...exactMatches, ...startsWithMatches, ...containsMatches].slice(0, limit);
+    return [...exactMatches, ...startsWithMatches, ...wordBoundaryMatches, ...containsMatches].slice(0, limit);
 }
 
 /**
