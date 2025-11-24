@@ -1,14 +1,21 @@
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
+// Utilizziamo Dynamic Imports (Top-Level Await)
+// Questo impedisce agli scanner statici di rilevare le dipendenze e 
+// iniettarle erroneamente nel file index.html frontend.
 
-// OBFUSCATED IMPORTS
-// We concatenate strings to hide dependencies from the static analysis scanner
-// preventing it from injecting backend libs into index.html
-const express = require('ex' + 'press');
-const nodemailer = require('node' + 'mailer');
-const multer = require('mul' + 'ter');
-const path = require('pa' + 'th');
-const { fileURLToPath } = require('u' + 'rl');
+console.log('[SYSTEM] Avvio inizializzazione moduli...');
+
+// Importazioni dinamiche
+const expressModule = await import('express');
+const nodemailerModule = await import('nodemailer');
+const multerModule = await import('multer');
+const pathModule = await import('path');
+const urlModule = await import('url');
+
+const express = expressModule.default;
+const nodemailer = nodemailerModule.default;
+const multer = multerModule.default;
+const path = pathModule.default;
+const { fileURLToPath } = urlModule;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,9 +24,10 @@ const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
 const PORT = process.env.PORT || 8080;
 
-console.log('[API] Avvio server API in corso...');
+console.log('[API] Moduli caricati. Configurazione server...');
 
 // Serve static files (Frontend build)
+// Assicurarsi che 'npm run build' sia stato eseguito prima
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // Endpoint Invio Email
@@ -34,28 +42,28 @@ app.post('/api/send-email', upload.single('pdf'), async (req, res) => {
 
     const { nome, cognome, emailUtente, telefono } = req.body;
 
-    // Configurazione SMTP (Simulata se mancano env vars per evitare crash in dev)
+    // Configurazione SMTP
     const emailUser = process.env.EMAIL_USER;
     const emailPass = process.env.EMAIL_PASS;
 
+    // Controllo rigoroso delle credenziali
     if (!emailUser || !emailPass) {
-      console.error('[API] Credenziali email mancanti (EMAIL_USER/EMAIL_PASS).');
-      return res.status(500).json({ error: 'Configurazione server incompleta. Contatta l\'amministratore.' });
+      console.error('[API ERROR] Credenziali email mancanti nelle Variabili d\'Ambiente.');
+      console.error('[API ERROR] Assicurati di aver impostato EMAIL_USER e EMAIL_PASS nel pannello di Cloud Run.');
+      return res.status(500).json({ error: 'Configurazione server incompleta (Credenziali mancanti).' });
     }
 
     const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-      port: 587,
-      secure: false,
+      service: 'gmail', // Usa il preset Gmail per semplicità
       auth: {
         user: emailUser,
-        pass: emailPass,
+        pass: emailPass, // Deve essere una "App Password" se usi 2FA
       },
     });
 
     const mailOptions = {
-      from: process.env.EMAIL_FROM || '"TT2112 Digitale" <noreply@tt2112.it>',
-      to: 'paolo.selvaggini@mit.gov.it',
+      from: `"TT2112 Digitale" <${emailUser}>`,
+      to: 'paolo.selvaggini@mit.gov.it', // Destinatario Ufficiale
       replyTo: emailUtente || undefined,
       subject: `Nuova Pratica TT2112: ${cognome} ${nome}`,
       text: `
@@ -77,21 +85,31 @@ app.post('/api/send-email', upload.single('pdf'), async (req, res) => {
       ],
     };
 
-    await transporter.sendMail(mailOptions);
-    console.log(`[API] Email inviata con successo per: ${cognome} ${nome}`);
-    res.status(200).json({ message: 'Email inviata con successo!' });
+    // Verifica connessione SMTP prima dell'invio
+    try {
+        await transporter.verify();
+        console.log('[API] Connessione SMTP verificata.');
+    } catch (verifyError) {
+        console.error('[API ERROR] Errore connessione SMTP:', verifyError);
+        throw new Error("Impossibile connettersi al server di posta. Controlla le credenziali.");
+    }
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`[API] Email inviata con successo! ID: ${info.messageId}`);
+    res.status(200).json({ message: 'Email inviata con successo!', id: info.messageId });
 
   } catch (error) {
-    console.error('[API] Errore critico invio email:', error);
-    res.status(500).json({ error: 'Errore server durante l\'invio. Controlla i log.' });
+    console.error('[API CRITICAL]', error);
+    res.status(500).json({ error: 'Errore durante l\'invio: ' + error.message });
   }
 });
 
-// Fallback per React Router
+// Fallback per React Router (gestisce il refresh delle pagine)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 app.listen(PORT, () => {
-  console.log(`[API] Server attivo e in ascolto sulla porta ${PORT}`);
+  console.log(`[API] Server attivo su porta ${PORT}`);
+  console.log(`[API] Environment: ${process.env.NODE_ENV}`);
 });
