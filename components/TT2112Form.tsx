@@ -191,33 +191,37 @@ const TT2112Form: React.FC = () => {
 
     const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        console.log(`[DEBUG] handleChange: ${name} = ${value}`);
         setFormData(prev => ({
             ...prev,
             [name]: value
         }));
 
-        setErrors(prev => ({
-            ...prev,
-            [name]: validateField(name, value)
-        }));
-    }, [validateField]);
+        // Clear error when user types
+        if (errors[name]) {
+            setErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors[name];
+                return newErrors;
+            });
+        }
+
+        // Validate CF on change if it's the CF field
+        if (name === 'codiceFiscale') {
+            validateField('codiceFiscale', value);
+        }
+    }, [errors, validateField]);
 
     // Autocomplete handlers
     const handleComuniNascitaSearch = useCallback(async (query: string) => {
-        console.log('[DEBUG] Search triggered:', query);
         if (!query || query.length < 2) {
             setComuniNascitaSuggestions([]);
             return;
         }
         try {
             const results = await searchComuni(query);
-            console.log('[DEBUG] Search results (raw):', results.length, results[0]);
-            const mapped = results.map(c => c.nome);
-            console.log('[DEBUG] Mapped results:', mapped);
-            setComuniNascitaSuggestions(mapped);
+            setComuniNascitaSuggestions(results.map(c => c.nome));
         } catch (e) {
-            console.error('[DEBUG] Search error:', e);
+            console.error('Search error:', e);
         }
     }, []);
 

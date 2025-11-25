@@ -56,34 +56,20 @@ console.log('[SYSTEM] Inizializzazione Server...');
     const distPath = path.join(__dirname, 'build_output');
     console.log(`[SYSTEM] Servendo file statici da: ${distPath}`);
 
-    // Debug: verifica esistenza comuni.json
-    const fs = require('fs');
-    const comuniPath = path.join(distPath, 'comuni.json');
-    if (fs.existsSync(comuniPath)) {
-      const stats = fs.statSync(comuniPath);
-      console.log(`[DEBUG] comuni.json trovato in build_output! Size: ${(stats.size / 1024 / 1024).toFixed(2)}MB`);
-    } else {
-      console.error(`[ERROR] comuni.json NON trovato in: ${comuniPath}`);
-      try {
-        console.log(`[DEBUG] Contenuto di build_output:`, fs.readdirSync(distPath));
-      } catch (e) {
-        console.log(`[DEBUG] Impossibile leggere build_output:`, e.message);
-      }
-    }
-
     // WORKAROUND: Serviamo comuni.json esplicitamente dalla root se non è in build_output
+    const fs = require('fs');
     app.get('/comuni.json', (req, res) => {
+      const comuniPath = path.join(distPath, 'comuni.json');
       const rootComuniPath = path.join(__dirname, 'comuni.json');
+
       if (fs.existsSync(rootComuniPath)) {
-        console.log('[DEBUG] Serving comuni.json from root');
         res.type('application/json');
         res.sendFile(rootComuniPath);
       } else if (fs.existsSync(comuniPath)) {
-        console.log('[DEBUG] Serving comuni.json from build_output');
         res.type('application/json');
         res.sendFile(comuniPath);
       } else {
-        console.error('[ERROR] comuni.json not found anywhere');
+        console.error('[ERROR] comuni.json not found');
         res.status(404).json({ error: 'File not found' });
       }
     });
