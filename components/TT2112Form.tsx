@@ -189,8 +189,9 @@ const TT2112Form: React.FC = () => {
         }
     }, []);
 
-    const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
+        console.log(`[DEBUG] handleChange: ${name} = ${value}`);
         setFormData(prev => ({
             ...prev,
             [name]: value

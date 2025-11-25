@@ -33,6 +33,8 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
     const wrapperRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
+    console.log('[DEBUG] Autocomplete Render. Value:', value);
+
     // Debounced search
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -118,9 +120,9 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
                     onFocus={() => value && value.length >= 2 && setIsOpen(true)}
                     maxLength={maxLength}
                     autoComplete="off"
-                    className={`w-full px-3 py-2.5 pr-10 rounded-lg outline-none transition-all shadow-sm uppercase font-bold text-sm bg-white text-slate-800 placeholder-slate-300 ${error
-                        ? 'border border-red-400 focus:ring-2 focus:ring-red-100'
-                        : 'border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-50'
+                    className={`w-full px-3 py-2.5 pr-10 rounded-lg outline-none transition-all shadow-sm uppercase font-bold text-sm bg-white text-slate-800 placeholder-slate-300 border-2 border-red-500 ${error
+                        ? 'border-red-400 focus:ring-2 focus:ring-red-100'
+                        : 'focus:border-blue-500 focus:ring-2 focus:ring-blue-50'
                         }`}
                     placeholder={placeholder}
                 />
