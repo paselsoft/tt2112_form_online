@@ -33,6 +33,7 @@ console.log('[SYSTEM] Inizializzazione Server...');
     // 2. CONFIGURAZIONE PATH
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
+    console.log(`[SYSTEM] __dirname: ${__dirname}`);
 
     // 3. SETUP EXPRESS
     const app = express();
@@ -170,10 +171,17 @@ console.log('[SYSTEM] Inizializzazione Server...');
       }
     });
 
-    // 6. FALLBACK ROUTE
-    // Qualsiasi richiesta non API ritorna l'app React (per gestire il routing lato client)
+    // 6. FALLBACK ROUTE (SPA)
+    // Importante: deve essere l'ultima route definita
     app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+      console.log(`[DEBUG] Fallback route hit for: ${req.path}`);
+      const indexDist = path.join(distPath, 'index.html');
+      if (fs.existsSync(indexDist)) {
+        res.sendFile(indexDist);
+      } else {
+        console.error(`[ERROR] index.html non trovato in dist: ${indexDist}`);
+        res.status(404).send('Application not built correctly. index.html missing.');
+      }
     });
 
     // 7. AVVIO LISTENER
