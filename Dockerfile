@@ -10,11 +10,11 @@ COPY package*.json ./
 # Installa tutte le dipendenze (sia per React che per Express)
 RUN npm install
 
-# Copia tutto il codice sorgente nel container
+# Copia tutto il codice# Copia il resto dei file
 COPY . .
 
 # Esegue la build dell'applicazione React (crea la cartella 'dist')
-RUN npm run build
+RUN rm -rf dist && npm run build
 
 # Copia esplicitamente comuni.json nella cartella dist e nella root
 RUN cp public/comuni.json dist/comuni.json && cp public/comuni.json ./comuni.json

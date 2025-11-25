@@ -44,6 +44,12 @@ console.log('[SYSTEM] Inizializzazione Server...');
     // Middleware per il parsing JSON (utile per debug o future espansioni)
     app.use(express.json());
 
+    // Debug: Version Header
+    app.use((req, res, next) => {
+      res.setHeader('X-App-Version', 'debug-0047');
+      next();
+    });
+
     // 4. SERVING FRONTEND (Produzione)
     // Serve i file statici dalla cartella 'dist' generata da 'vite build'
     const distPath = path.join(__dirname, 'dist');
