@@ -36,7 +36,9 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
     // Debounced search
     useEffect(() => {
         const timer = setTimeout(() => {
+            console.log('[DEBUG] Autocomplete effect running. Value:', value);
             if (value && value.length >= 2) {
+                console.log('[DEBUG] Calling onSearch with:', value);
                 onSearch(value);
                 setIsOpen(true);
             } else {
@@ -117,8 +119,8 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
                     maxLength={maxLength}
                     autoComplete="off"
                     className={`w-full px-3 py-2.5 pr-10 rounded-lg outline-none transition-all shadow-sm uppercase font-bold text-sm bg-white text-slate-800 placeholder-slate-300 ${error
-                            ? 'border border-red-400 focus:ring-2 focus:ring-red-100'
-                            : 'border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-50'
+                        ? 'border border-red-400 focus:ring-2 focus:ring-red-100'
+                        : 'border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-50'
                         }`}
                     placeholder={placeholder}
                 />
@@ -136,8 +138,8 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
                                 type="button"
                                 onClick={() => handleSelect(suggestion)}
                                 className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors ${index === highlightedIndex
-                                        ? 'bg-blue-50 text-blue-700'
-                                        : 'text-slate-700 hover:bg-slate-50'
+                                    ? 'bg-blue-50 text-blue-700'
+                                    : 'text-slate-700 hover:bg-slate-50'
                                     }`}
                             >
                                 {suggestion}

@@ -203,7 +203,7 @@ const TT2112Form: React.FC = () => {
     }, [validateField]);
 
     // Autocomplete handlers
-    const handleComuniNascitaSearch = async (query: string) => {
+    const handleComuniNascitaSearch = useCallback(async (query: string) => {
         console.log('[DEBUG] Search triggered:', query);
         if (!query || query.length < 2) {
             setComuniNascitaSuggestions([]);
@@ -218,9 +218,9 @@ const TT2112Form: React.FC = () => {
         } catch (e) {
             console.error('[DEBUG] Search error:', e);
         }
-    };
+    }, []);
 
-    const handleComuniNascitaSelect = async (value: string) => {
+    const handleComuniNascitaSelect = useCallback(async (value: string) => {
         setFormData(prev => ({ ...prev, luogoNascita: value }));
 
         // Auto-fill provincia
@@ -228,16 +228,16 @@ const TT2112Form: React.FC = () => {
         if (provincia) {
             setFormData(prev => ({ ...prev, provinciaNascita: provincia }));
         }
-    };
+    }, []);
 
-    const handleComuniResidenzaSearch = async (query: string) => {
+    const handleComuniResidenzaSearch = useCallback(async (query: string) => {
         if (!query || query.length < 2) {
             setComuniResidenzaSuggestions([]);
             return;
         }
         const results = await searchComuni(query);
         setComuniResidenzaSuggestions(results.map(c => c.nome));
-    };
+    }, []);
 
     const handleComuniResidenzaSelect = useCallback(async (comuneNome: string) => {
         const provincia = await getProvinciaByComune(comuneNome);
