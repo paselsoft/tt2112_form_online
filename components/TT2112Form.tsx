@@ -204,12 +204,20 @@ const TT2112Form: React.FC = () => {
 
     // Autocomplete handlers
     const handleComuniNascitaSearch = async (query: string) => {
+        console.log('[DEBUG] Search triggered:', query);
         if (!query || query.length < 2) {
             setComuniNascitaSuggestions([]);
             return;
         }
-        const results = await searchComuni(query);
-        setComuniNascitaSuggestions(results.map(c => c.nome));
+        try {
+            const results = await searchComuni(query);
+            console.log('[DEBUG] Search results (raw):', results.length, results[0]);
+            const mapped = results.map(c => c.nome);
+            console.log('[DEBUG] Mapped results:', mapped);
+            setComuniNascitaSuggestions(mapped);
+        } catch (e) {
+            console.error('[DEBUG] Search error:', e);
+        }
     };
 
     const handleComuniNascitaSelect = async (value: string) => {
