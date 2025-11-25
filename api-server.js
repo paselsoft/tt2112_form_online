@@ -52,8 +52,8 @@ console.log('[SYSTEM] Inizializzazione Server...');
     });
 
     // 4. SERVING FRONTEND (Produzione)
-    // Serve i file statici dalla cartella 'dist' generata da 'vite build'
-    const distPath = path.join(__dirname, 'dist');
+    // Serve i file statici dalla cartella 'build_output' generata da 'vite build'
+    const distPath = path.join(__dirname, 'build_output');
     console.log(`[SYSTEM] Servendo file statici da: ${distPath}`);
 
     // Debug: verifica esistenza comuni.json
@@ -61,17 +61,17 @@ console.log('[SYSTEM] Inizializzazione Server...');
     const comuniPath = path.join(distPath, 'comuni.json');
     if (fs.existsSync(comuniPath)) {
       const stats = fs.statSync(comuniPath);
-      console.log(`[DEBUG] comuni.json trovato in dist! Size: ${(stats.size / 1024 / 1024).toFixed(2)}MB`);
+      console.log(`[DEBUG] comuni.json trovato in build_output! Size: ${(stats.size / 1024 / 1024).toFixed(2)}MB`);
     } else {
       console.error(`[ERROR] comuni.json NON trovato in: ${comuniPath}`);
       try {
-        console.log(`[DEBUG] Contenuto di dist:`, fs.readdirSync(distPath));
+        console.log(`[DEBUG] Contenuto di build_output:`, fs.readdirSync(distPath));
       } catch (e) {
-        console.log(`[DEBUG] Impossibile leggere dist:`, e.message);
+        console.log(`[DEBUG] Impossibile leggere build_output:`, e.message);
       }
     }
 
-    // WORKAROUND: Serviamo comuni.json esplicitamente dalla root se non è in dist
+    // WORKAROUND: Serviamo comuni.json esplicitamente dalla root se non è in build_output
     app.get('/comuni.json', (req, res) => {
       const rootComuniPath = path.join(__dirname, 'comuni.json');
       if (fs.existsSync(rootComuniPath)) {
@@ -79,7 +79,7 @@ console.log('[SYSTEM] Inizializzazione Server...');
         res.type('application/json');
         res.sendFile(rootComuniPath);
       } else if (fs.existsSync(comuniPath)) {
-        console.log('[DEBUG] Serving comuni.json from dist');
+        console.log('[DEBUG] Serving comuni.json from build_output');
         res.type('application/json');
         res.sendFile(comuniPath);
       } else {
@@ -179,7 +179,7 @@ console.log('[SYSTEM] Inizializzazione Server...');
       if (fs.existsSync(indexDist)) {
         res.sendFile(indexDist);
       } else {
-        console.error(`[ERROR] index.html non trovato in dist: ${indexDist}`);
+        console.error(`[ERROR] index.html non trovato in build_output: ${indexDist}`);
         res.status(404).send('Application not built correctly. index.html missing.');
       }
     });

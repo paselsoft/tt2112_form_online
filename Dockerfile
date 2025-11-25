@@ -13,12 +13,12 @@ RUN npm install
 # Copia tutto il codice# Copia il resto dei file
 COPY . .
 
-# Esegue la build dell'applicazione React (crea la cartella 'dist')
-RUN rm -rf dist && npm run build
+# Esegue la build dell'applicazione React (crea la cartella 'build_output')
+RUN rm -rf build_output && npm run build
 
-# Copia esplicitamente comuni.json nella cartella dist e nella root
-RUN cp public/comuni.json dist/comuni.json && cp public/comuni.json ./comuni.json
-RUN ls -lh dist/comuni.json && ls -lh ./comuni.json
+# Copia esplicitamente comuni.json nella cartella build_output e nella root
+RUN cp public/comuni.json build_output/comuni.json && cp public/comuni.json ./comuni.json
+RUN ls -lh build_output/comuni.json && ls -lh ./comuni.json
 
 # Imposta la variabile d'ambiente PORT (necessaria per Cloud Run)
 ENV PORT=8080
