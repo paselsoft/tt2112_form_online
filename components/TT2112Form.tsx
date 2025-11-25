@@ -203,25 +203,33 @@ const TT2112Form: React.FC = () => {
     }, [validateField]);
 
     // Autocomplete handlers
-    const handleComuniNascitaSearch = useCallback(async (query: string) => {
+    const handleComuniNascitaSearch = async (query: string) => {
+        if (!query || query.length < 2) {
+            setComuniNascitaSuggestions([]);
+            return;
+        }
         const results = await searchComuni(query);
         setComuniNascitaSuggestions(results.map(c => c.nome));
-    }, []);
+    };
 
-    const handleComuniNascitaSelect = useCallback(async (comuneNome: string) => {
-        const provincia = await getProvinciaByComune(comuneNome);
-        setFormData(prev => ({
-            ...prev,
-            luogoNascita: comuneNome,
-            provinciaNascita: provincia
-        }));
-        setComuniNascitaSuggestions([]);
-    }, []);
+    const handleComuniNascitaSelect = async (value: string) => {
+        setFormData(prev => ({ ...prev, luogoNascita: value }));
 
-    const handleComuniResidenzaSearch = useCallback(async (query: string) => {
+        // Auto-fill provincia
+        const provincia = await getProvinciaByComune(value);
+        if (provincia) {
+            setFormData(prev => ({ ...prev, provinciaNascita: provincia }));
+        }
+    };
+
+    const handleComuniResidenzaSearch = async (query: string) => {
+        if (!query || query.length < 2) {
+            setComuniResidenzaSuggestions([]);
+            return;
+        }
         const results = await searchComuni(query);
         setComuniResidenzaSuggestions(results.map(c => c.nome));
-    }, []);
+    };
 
     const handleComuniResidenzaSelect = useCallback(async (comuneNome: string) => {
         const provincia = await getProvinciaByComune(comuneNome);
