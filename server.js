@@ -14,6 +14,27 @@ const PORT = process.env.PORT || 8080;
 // Serve static files from the React app build directory
 app.use(express.static(path.join(__dirname, 'dist')));
 
+// PDF Template endpoint with optimized cache headers
+app.get('/tt2112-template.pdf', (req, res) => {
+  const pdfPath = path.join(__dirname, 'dist', 'tt2112-template.pdf');
+
+  // Ottimizzato per proxy aziendali e caching
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'); // 1 year cache
+  res.setHeader('Access-Control-Allow-Origin', '*'); // Permissivo per proxy
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Content-Disposition', 'inline; filename="tt2112-template.pdf"');
+
+  res.sendFile(pdfPath, (err) => {
+    if (err) {
+      console.error('Error serving PDF template:', err);
+      res.status(404).json({ error: 'Template PDF non trovato' });
+    } else {
+      console.log('PDF template servito con successo');
+    }
+  });
+});
+
 // Email sending endpoint
 app.post('/api/send-email', upload.single('pdf'), async (req, res) => {
   try {

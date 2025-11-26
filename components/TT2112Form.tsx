@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { TT2112Data, INITIAL_DATA, RequestType, Gender, ValidationErrors } from '../types';
 import { generateTT2112PDF } from '../services/pdfService';
-import { PDF_TEMPLATE_URL } from '../services/embeddedTemplate';
+import { PDF_TEMPLATE_URL, PDF_TEMPLATE_FALLBACK } from '../services/embeddedTemplate';
 import { Download, User, MapPin, FileText, Bug, FileUp, Wand2, CheckCircle, Settings, Trash2, AlertCircle, Phone, Mail, Loader2, AlertTriangle, Send } from 'lucide-react';
 
 // Optimized helper for base64 conversion to avoid stack overflow or UI freeze with large files
@@ -93,41 +93,68 @@ const TT2112Form: React.FC = () => {
   // Cache key versioning to handle template updates - BUMPED TO V25
   const CACHE_KEY = 'tt2112_template_v25';
 
-  // Load template logic
+  // Load template logic with fallback support
   useEffect(() => {
     let isMounted = true;
 
     const loadTemplate = async () => {
         setFetchError(null);
+
         // 1. Check LocalStorage (Cache) first to save bandwidth
         const cached = localStorage.getItem(CACHE_KEY);
         if (cached) {
             try {
                 const buffer = base64ToArrayBuffer(cached);
                 if (isMounted) setPdfTemplate(buffer);
-                return; 
+                return;
             } catch (e) {
                 console.error("Errore caricamento cache", e);
                 localStorage.removeItem(CACHE_KEY);
             }
         }
 
-        // 2. If no cache, check if URL is provided
-        if (PDF_TEMPLATE_URL && PDF_TEMPLATE_URL.startsWith('http')) {
-            if (isMounted) setIsLoadingTemplate(true);
+        // 2. Try primary source (Cloud Run - same origin, bypassa proxy)
+        if (isMounted) setIsLoadingTemplate(true);
+        try {
+            console.log("Tentativo caricamento da Cloud Run:", PDF_TEMPLATE_URL);
+            const response = await fetch(PDF_TEMPLATE_URL);
+            if (!response.ok) {
+                throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
+            }
+
+            const buffer = await response.arrayBuffer();
+
+            if (isMounted) {
+                setPdfTemplate(buffer);
+                setUsingEmbedded(true);
+                console.log("✓ Template caricato con successo da Cloud Run");
+            }
+
+            // Cache it for next time
             try {
-                const response = await fetch(PDF_TEMPLATE_URL);
+                const base64 = arrayBufferToBase64(buffer);
+                localStorage.setItem(CACHE_KEY, base64);
+            } catch (e) {
+                console.warn("Could not cache downloaded PDF", e);
+            }
+        } catch (primaryError: any) {
+            console.warn("Caricamento da Cloud Run fallito, provo fallback GitHub:", primaryError.message);
+
+            // 3. Fallback to GitHub (per utenti esterni o se Cloud Run ha problemi)
+            try {
+                const response = await fetch(PDF_TEMPLATE_FALLBACK);
                 if (!response.ok) {
                     throw new Error(`HTTP Error ${response.status}: ${response.statusText}`);
                 }
-                
+
                 const buffer = await response.arrayBuffer();
-                
+
                 if (isMounted) {
                     setPdfTemplate(buffer);
-                    setUsingEmbedded(true); // Mark as "official" template
+                    setUsingEmbedded(true);
+                    console.log("✓ Template caricato con successo da GitHub (fallback)");
                 }
-                
+
                 // Cache it for next time
                 try {
                     const base64 = arrayBufferToBase64(buffer);
@@ -135,12 +162,17 @@ const TT2112Form: React.FC = () => {
                 } catch (e) {
                     console.warn("Could not cache downloaded PDF", e);
                 }
-            } catch (error: any) {
-                console.error("Failed to fetch PDF from URL:", error);
-                if (isMounted) setFetchError("Impossibile scaricare il modello automatico. Assicurati che il repository GitHub sia PUBBLICO.");
-            } finally {
-                if (isMounted) setIsLoadingTemplate(false);
+            } catch (fallbackError: any) {
+                console.error("Entrambe le fonti hanno fallito:", fallbackError);
+                if (isMounted) {
+                    setFetchError(
+                        "Impossibile scaricare il modello automatico. " +
+                        "Se sei dietro un proxy aziendale, usa il pulsante 'Carica Manualmente PDF' qui sotto."
+                    );
+                }
             }
+        } finally {
+            if (isMounted) setIsLoadingTemplate(false);
         }
     };
 
