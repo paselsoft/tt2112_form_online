@@ -1,0 +1,125 @@
+═══════════════════════════════════════════════════════════════
+   COMANDI DEPLOY - TT2112 Digitale
+   Esegui questi comandi dal tuo terminale con gcloud configurato
+═══════════════════════════════════════════════════════════════
+
+✅ STATO ATTUALE:
+   - Build locale: ✓ COMPLETATO
+   - PDF verificato: ✓ 1.2M (8 pagine) presente in dist/
+   - Codice pronto: ✓ Tutte le modifiche committate
+
+═══════════════════════════════════════════════════════════════
+
+📋 OPZIONE 1: Script Automatico (CONSIGLIATO)
+═══════════════════════════════════════════════════════════════
+
+Esegui semplicemente:
+
+    ./DEPLOY_COMMANDS.sh
+
+Tempo stimato: 3-4 minuti
+
+═══════════════════════════════════════════════════════════════
+
+📋 OPZIONE 2: Comandi Manuali (Copia e Incolla)
+═══════════════════════════════════════════════════════════════
+
+# Step 1: Build Docker image (2-3 minuti)
+gcloud builds submit \
+  --tag gcr.io/gen-lang-client-0783889984/tt2112-digitale \
+  --project=gen-lang-client-0783889984 \
+  --timeout=10m
+
+# Step 2: Deploy su Cloud Run
+gcloud run deploy tt2112-digitale \
+  --image gcr.io/gen-lang-client-0783889984/tt2112-digitale \
+  --platform managed \
+  --region us-west1 \
+  --project=gen-lang-client-0783889984
+
+# Step 3: Ottieni URL servizio
+gcloud run services describe tt2112-digitale \
+  --platform managed \
+  --region us-west1 \
+  --format 'value(status.url)' \
+  --project=gen-lang-client-0783889984
+
+═══════════════════════════════════════════════════════════════
+
+🧪 TEST POST-DEPLOY
+═══════════════════════════════════════════════════════════════
+
+Dopo il deploy, salva l'URL mostrato e testa:
+
+# Test 1: Health check
+curl -I <URL_SERVIZIO>
+
+# Test 2: PDF template
+curl -I <URL_SERVIZIO>/tt2112-template.pdf
+
+# Test 3: Browser
+# - Apri URL nel browser
+# - DevTools Console (F12)
+# - Cerca: "✓ Template caricato con successo da Cloud Run"
+
+# Test 4: 🏢 DA PC UFFICIO (CRITICO!)
+# - Apri da PC ministeriale
+# - Verifica caricamento automatico PDF
+# - Compila form e scarica PDF
+# - Verifica che funzioni senza upload manuale
+
+═══════════════════════════════════════════════════════════════
+
+📊 MONITORING
+═══════════════════════════════════════════════════════════════
+
+# Logs in tempo reale
+gcloud run services logs tail tt2112-digitale \
+  --region us-west1 \
+  --project=gen-lang-client-0783889984
+
+# Ultimi 50 log
+gcloud run services logs read tt2112-digitale \
+  --region us-west1 \
+  --limit 50 \
+  --project=gen-lang-client-0783889984
+
+═══════════════════════════════════════════════════════════════
+
+🔄 ROLLBACK (Se necessario)
+═══════════════════════════════════════════════════════════════
+
+# Lista revisioni
+gcloud run revisions list \
+  --service tt2112-digitale \
+  --region us-west1 \
+  --project=gen-lang-client-0783889984
+
+# Rollback a revisione precedente (sostituisci REVISION_NAME)
+gcloud run services update-traffic tt2112-digitale \
+  --region us-west1 \
+  --to-revisions REVISION_NAME=100 \
+  --project=gen-lang-client-0783889984
+
+═══════════════════════════════════════════════════════════════
+
+✅ RISULTATO ATTESO
+═══════════════════════════════════════════════════════════════
+
+PRIMA:
+  PC Ufficio → ❌ Proxy blocca GitHub → Template non caricato
+
+DOPO:
+  PC Ufficio → ✅ Cloud Run (same-origin) → Template caricato!
+
+Success rate atteso in ufficio: 95-99%
+
+═══════════════════════════════════════════════════════════════
+
+🎯 IL TEST PIÙ IMPORTANTE: PC UFFICIO!
+═══════════════════════════════════════════════════════════════
+
+Dopo il deploy, il vero test è dal PC ministeriale.
+Lì vedrai se il proxy ora permette il caricamento del PDF.
+
+Buon deploy! 🚀
