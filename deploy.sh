@@ -12,9 +12,9 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configurazione (MODIFICA QUESTI VALORI)
-PROJECT_ID="${GCP_PROJECT_ID:-your-project-id}"
+PROJECT_ID="${GCP_PROJECT_ID:-gen-lang-client-0783889984}"
 SERVICE_NAME="tt2112-digitale"
-REGION="europe-west1"
+REGION="us-west1"
 IMAGE_NAME="gcr.io/${PROJECT_ID}/${SERVICE_NAME}"
 
 echo -e "${BLUE}==================================================${NC}"
