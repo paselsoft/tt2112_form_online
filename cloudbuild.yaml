@@ -1,0 +1,74 @@
+# Cloud Build configuration per TT2112 Digitale
+# Esegue build e deploy automatico su Google Cloud Run
+
+# Sostituzioni automatiche (configurabili)
+substitutions:
+  _SERVICE_NAME: tt2112-digitale
+  _REGION: europe-west1
+  _MEMORY: 512Mi
+  _CPU: '1'
+  _MAX_INSTANCES: '10'
+  _MIN_INSTANCES: '0'
+
+steps:
+  # Step 1: Build Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:latest'
+      - '.'
+    id: 'build-image'
+
+  # Step 2: Push image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$COMMIT_SHA'
+    id: 'push-image'
+    waitFor: ['build-image']
+
+  # Step 3: Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image=gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$COMMIT_SHA'
+      - '--region=${_REGION}'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--port=8080'
+      - '--memory=${_MEMORY}'
+      - '--cpu=${_CPU}'
+      - '--max-instances=${_MAX_INSTANCES}'
+      - '--min-instances=${_MIN_INSTANCES}'
+      - '--timeout=300'
+      # Variabili d'ambiente (configura i secrets in Secret Manager)
+      - '--update-env-vars=EMAIL_HOST=smtp.gmail.com,NODE_ENV=production'
+      # Per secrets usa: --update-secrets=EMAIL_PASS=email-password:latest
+    id: 'deploy-cloud-run'
+    waitFor: ['push-image']
+
+# Images da pushare al registry
+images:
+  - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/${_SERVICE_NAME}:latest'
+
+# Timeout totale per il build
+timeout: '1200s'
+
+# Opzioni build
+options:
+  machineType: 'N1_HIGHCPU_8'
+  logging: CLOUD_LOGGING_ONLY
+  substitution_option: 'ALLOW_LOOSE'
+
+# Tags per organizzazione
+tags:
+  - 'tt2112'
+  - 'cloud-run'
+  - 'production'
