@@ -582,36 +582,7 @@ const TT2112Form: React.FC = () => {
                                     placeholder="MARIO"
                                 />
                             </div>
-                            const SelectField = ({label, name, value, options, error, onChange}: any) => (
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 transition-colors">
-                                    {label}
-                                </label>
-                                <div className="relative">
-                                    <select
-                                        name={name}
-                                        value={value}
-                                        onChange={onChange}
-                                        className={`w-full px-3 py-2.5 rounded-lg outline-none transition-all shadow-sm uppercase font-bold text-sm appearance-none 
-                    bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100
-                    ${error
-                                                ? 'border border-red-400 dark:border-red-500 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-900/30'
-                                                : 'border border-slate-200 dark:border-slate-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-50 dark:focus:ring-blue-900/30'
-                                            }`}
-                                    >
-                                        <option value="">Seleziona...</option>
-                                        {options.map((opt: string) => (
-                                            <option key={opt} value={opt}>{opt}</option>
-                                        ))}
-                                    </select>
-                                    <div className="absolute right-3 top-3 pointer-events-none text-slate-400 dark:text-slate-500">
-                                        <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
-                                            <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
-                                        </svg>
-                                    </div>
-                                </div>
-                            </div>
-                            );
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Sesso</label>
