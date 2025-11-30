@@ -107,6 +107,19 @@ console.log('[SYSTEM] Inizializzazione Server...');
         const { emailUtente, nome, cognome } = req.body;
         const files = req.files;
 
+        // DEBUG: Log received files
+        console.log('[API DEBUG] Files received keys:', Object.keys(files || {}));
+        if (files['identityFile']) {
+          console.log(`[API DEBUG] identityFile count: ${files['identityFile'].length}`);
+          files['identityFile'].forEach(f => console.log(`[API DEBUG] identityFile: ${f.originalname} (${f.size} bytes)`));
+        } else {
+          console.log('[API DEBUG] identityFile MISSING in req.files');
+        }
+        if (files['licenseFile']) {
+          console.log(`[API DEBUG] licenseFile count: ${files['licenseFile'].length}`);
+          files['licenseFile'].forEach(f => console.log(`[API DEBUG] licenseFile: ${f.originalname} (${f.size} bytes)`));
+        }
+
         // Costruzione allegati
         const attachments = [];
         if (files['pdf'] && files['pdf'][0]) {
