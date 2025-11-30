@@ -255,14 +255,15 @@ const TT2112Form: React.FC = () => {
     }, []);
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'identity' | 'license') => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
+        if (e.target.files && e.target.files.length > 0) {
+            const newFiles = Array.from(e.target.files);
 
-            // Validation: Max 5MB
-            if (file.size > 5 * 1024 * 1024) {
+            // Validation: Max 5MB per file
+            const invalidFiles = newFiles.filter(file => file.size > 5 * 1024 * 1024);
+            if (invalidFiles.length > 0) {
                 setErrors(prev => ({
                     ...prev,
-                    [type === 'identity' ? 'identityFile' : 'licenseFile']: 'Il file supera il limite di 5MB'
+                    [type === 'identity' ? 'identityFile' : 'licenseFile']: `Uno o più file superano il limite di 5MB`
                 }));
                 e.target.value = ''; // Reset input
                 return;
@@ -276,10 +277,20 @@ const TT2112Form: React.FC = () => {
             });
 
             if (type === 'identity') {
-                setIdentityFile(file);
+                setIdentityFiles(prev => [...prev, ...newFiles]);
             } else {
-                setLicenseFile(file);
+                setLicenseFiles(prev => [...prev, ...newFiles]);
             }
+            // Reset input value to allow selecting the same file again if needed
+            e.target.value = '';
+        }
+    };
+
+    const removeFile = (type: 'identity' | 'license', index: number) => {
+        if (type === 'identity') {
+            setIdentityFiles(prev => prev.filter((_, i) => i !== index));
+        } else {
+            setLicenseFiles(prev => prev.filter((_, i) => i !== index));
         }
     };
 
@@ -974,6 +985,9 @@ const TT2112Form: React.FC = () => {
 
                 {/* Footer Controls */}
                 <div className="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 shrink-0 space-y-3 transition-colors">
+                    <div className="text-center text-[10px] text-slate-400">
+                        v2.0 - Debug Upload
+                    </div>
                     <button
                         onClick={() => setShowCalibration(!showCalibration)}
                         className="w-full flex items-center justify-center gap-2 text-xs font-bold text-slate-500 hover:text-blue-600 mb-2 transition-colors"
