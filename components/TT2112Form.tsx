@@ -102,10 +102,24 @@ const TT2112Form: React.FC = () => {
     // Auto-save state
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [saveError, setSaveError] = useState<string | null>(null);
+    const [saveCount, setSaveCount] = useState(0);
+    const [storageStatus, setStorageStatus] = useState<string>('checking');
 
     // Cache key versioning to handle template updates - BUMPED TO V25
     const DRAFT_KEY = 'tt2112_draft_data_v1';
     const CACHE_KEY = 'tt2112_template_v25';
+
+    // Check storage on mount
+    useEffect(() => {
+        try {
+            const testKey = '__storage_test__';
+            localStorage.setItem(testKey, testKey);
+            localStorage.removeItem(testKey);
+            setStorageStatus('available');
+        } catch (e) {
+            setStorageStatus('unavailable: ' + String(e));
+        }
+    }, []);
 
     // Save draft on change
     useEffect(() => {
@@ -114,9 +128,10 @@ const TT2112Form: React.FC = () => {
                 localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
                 setLastSaved(new Date());
                 setSaveError(null);
+                setSaveCount(c => c + 1);
             } catch (err) {
                 console.error("Auto-save failed", err);
-                setSaveError("Impossibile salvare la bozza (localStorage disabilitato?)");
+                setSaveError("Impossibile salvare: " + String(err));
             }
         }, 500); // Debounce save
         return () => clearTimeout(timeoutId);
@@ -1129,6 +1144,11 @@ const TT2112Form: React.FC = () => {
 
                 {/* Footer Controls */}
                 <div className="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 shrink-0 space-y-3 transition-colors">
+                    {/* Debug Info */}
+                    <div className="text-[9px] text-slate-300 text-center font-mono">
+                        Storage: {storageStatus} | Saves: {saveCount}
+                    </div>
+
                     {saveError && (
                         <div className="text-center text-[10px] text-red-500 flex items-center justify-center gap-1">
                             <AlertCircle size={10} />
