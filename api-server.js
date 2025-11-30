@@ -88,38 +88,43 @@ console.log('[SYSTEM] Inizializzazione Server...');
       console.log('[API] Richiesta POST /api/send-email ricevuta');
 
       try {
-        success: true,
+        // Invio Effettivo
+        const info = await transporter.sendMail(mailOptions);
+        console.log(`[API] Email inviata con successo. ID: ${info.messageId}`);
+
+        res.status(200).json({
+          success: true,
           message: 'Email inviata correttamente',
-            id: info.messageId
-      });
+          id: info.messageId
+        });
 
-  } catch (error) {
-    console.error('[API FATAL]', error);
-    res.status(500).json({ error: 'Errore interno del server durante l\'invio.' });
-  }
-});
+      } catch (error) {
+        console.error('[API FATAL]', error);
+        res.status(500).json({ error: 'Errore interno del server durante l\'invio.' });
+      }
+    });
 
-// 6. FALLBACK ROUTE (SPA)
-// Importante: deve essere l'ultima route definita
-app.get('*', (req, res) => {
-  console.log(`[DEBUG] Fallback route hit for: ${req.path}`);
-  const indexDist = path.join(distPath, 'index.html');
-  if (fs.existsSync(indexDist)) {
-    res.sendFile(indexDist);
-  } else {
-    console.error(`[ERROR] index.html non trovato in build_output: ${indexDist}`);
-    res.status(404).send('Application not built correctly. index.html missing.');
-  }
-});
+    // 6. FALLBACK ROUTE (SPA)
+    // Importante: deve essere l'ultima route definita
+    app.get('*', (req, res) => {
+      console.log(`[DEBUG] Fallback route hit for: ${req.path}`);
+      const indexDist = path.join(distPath, 'index.html');
+      if (fs.existsSync(indexDist)) {
+        res.sendFile(indexDist);
+      } else {
+        console.error(`[ERROR] index.html non trovato in build_output: ${indexDist}`);
+        res.status(404).send('Application not built correctly. index.html missing.');
+      }
+    });
 
-// 7. AVVIO LISTENER
-app.listen(PORT, () => {
-  console.log(`[SYSTEM] Server attivo e in ascolto su porta ${PORT}`);
-  console.log(`[SYSTEM] URL locale: http://localhost:${PORT}`);
-});
+    // 7. AVVIO LISTENER
+    app.listen(PORT, () => {
+      console.log(`[SYSTEM] Server attivo e in ascolto su porta ${PORT}`);
+      console.log(`[SYSTEM] URL locale: http://localhost:${PORT}`);
+    });
 
   } catch (err) {
-  console.error('[SYSTEM CRITICAL] Il server non è riuscito ad avviarsi:', err);
-  process.exit(1);
-}
-}) ();
+    console.error('[SYSTEM CRITICAL] Il server non è riuscito ad avviarsi:', err);
+    process.exit(1);
+  }
+})();
