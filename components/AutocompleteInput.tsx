@@ -117,7 +117,7 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
                     maxLength={maxLength}
                     autoComplete="off"
                     className={`w-full px-3 py-2.5 pr-10 rounded-lg outline-none transition-all shadow-sm uppercase font-bold text-base sm:text-sm 
-                        bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 placeholder-slate-300 dark:placeholder-slate-600
+                        bg-white dark:bg-slate-900 text-slate-800 dark:text-white placeholder-slate-300 dark:placeholder-slate-600
                         ${error
                             ? 'border border-red-400 dark:border-red-500 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-900/30'
                             : 'border border-slate-200 dark:border-slate-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-50 dark:focus:ring-blue-900/30'
