@@ -1053,15 +1053,15 @@ const TT2112Form: React.FC = () => {
                     <button
                         onClick={handlePreview}
                         disabled={isSendingEmail}
-                        className="flex-1 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold py-3 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600 transition-all flex items-center justify-center gap-2"
+                        className="flex-1 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold py-2 text-sm rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-all flex items-center justify-center gap-2"
                     >
-                        <FileText size={20} />
+                        <FileText size={18} />
                         Anteprima
                     </button>
                     <button
                         onClick={handleSendEmail}
                         disabled={isSendingEmail}
-                        className={`flex-[2] font-bold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2
+                        className={`flex-[2] font-bold py-2 text-sm rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2
                             ${isSendingEmail
                                 ? 'bg-slate-400 cursor-not-allowed'
                                 : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white'
@@ -1069,12 +1069,12 @@ const TT2112Form: React.FC = () => {
                     >
                         {isSendingEmail ? (
                             <>
-                                <Loader2 className="animate-spin" />
+                                <Loader2 size={16} className="animate-spin" />
                                 Invio in corso...
                             </>
                         ) : (
                             <>
-                                <Send size={20} />
+                                <Send size={18} />
                                 Invia Modulo
                             </>
                         )}
