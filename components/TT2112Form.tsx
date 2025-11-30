@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { TT2112Data, INITIAL_DATA, RequestType, Gender, ValidationErrors } from '../types';
 import { generateTT2112PDF } from '../services/pdfService';
 import { PDF_TEMPLATE_URL } from '../services/embeddedTemplate';
-import { Download, User, MapPin, FileText, Bug, FileUp, Wand2, CheckCircle, Settings, Trash2, AlertCircle, Phone, Mail, Loader2, AlertTriangle, Send, ExternalLink } from 'lucide-react';
+import { Download, Send, RefreshCw, AlertCircle, CheckCircle, Upload, MapPin, Phone, FileText, User, Bug, FileUp, Wand2, Settings, Trash2, Mail, Loader2, AlertTriangle, ExternalLink } from 'lucide-react';
 import AutocompleteInput from './AutocompleteInput';
 import { searchComuni, getCapByComune, getProvinciaByComune } from '../services/comuniData';
 
@@ -92,6 +92,10 @@ const TT2112Form: React.FC = () => {
     // Autocomplete states
     const [comuniNascitaSuggestions, setComuniNascitaSuggestions] = useState<string[]>([]);
     const [comuniResidenzaSuggestions, setComuniResidenzaSuggestions] = useState<string[]>([]);
+
+    // File upload states
+    const [identityFile, setIdentityFile] = useState<File | null>(null);
+    const [licenseFile, setLicenseFile] = useState<File | null>(null);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -247,16 +251,46 @@ const TT2112Form: React.FC = () => {
     const handleComuniResidenzaSelect = useCallback(async (comuneNome: string) => {
         const provincia = await getProvinciaByComune(comuneNome);
         const cap = await getCapByComune(comuneNome);
+
         setFormData(prev => ({
             ...prev,
             residenzaComune: comuneNome,
-            residenzaProvincia: provincia,
-            residenzaCap: cap
+            residenzaProvincia: provincia || prev.residenzaProvincia,
+            residenzaCap: cap || prev.residenzaCap
         }));
         setComuniResidenzaSuggestions([]);
     }, []);
 
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'identity' | 'license') => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+
+            // Validation: Max 5MB
+            if (file.size > 5 * 1024 * 1024) {
+                setErrors(prev => ({
+                    ...prev,
+                    [type === 'identity' ? 'identityFile' : 'licenseFile']: 'Il file supera il limite di 5MB'
+                }));
+                e.target.value = ''; // Reset input
+                return;
+            }
+
+            // Clear error
+            setErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors[type === 'identity' ? 'identityFile' : 'licenseFile'];
+                return newErrors;
+            });
+
+            if (type === 'identity') {
+                setIdentityFile(file);
+            } else {
+                setLicenseFile(file);
+            }
+        }
+    };
+
+    const handleTemplateFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
             if (file.type !== 'application/pdf') {
@@ -382,17 +416,27 @@ const TT2112Form: React.FC = () => {
                 showDebug: false
             });
 
-            const blob = new Blob([filledPdfBytes], { type: 'application/pdf' });
+            const pdfBlob = new Blob([filledPdfBytes], { type: 'application/pdf' });
+            // Prepare form data for email
             const formDataToSend = new FormData();
-            formDataToSend.append('pdf', blob, `TT2112_${formData.cognome}.pdf`);
+            formDataToSend.append('pdf', pdfBlob, `TT2112_${formData.cognome}_${formData.nome}.pdf`);
             formDataToSend.append('nome', formData.nome);
             formDataToSend.append('cognome', formData.cognome);
-            if (formData.email) formDataToSend.append('emailUtente', formData.email);
-            if (formData.telefono) formDataToSend.append('telefono', formData.telefono);
+            formDataToSend.append('emailUtente', formData.email || '');
+            formDataToSend.append('telefono', formData.telefono || '');
 
+            // Append uploaded files if present
+            if (identityFile) {
+                formDataToSend.append('identityFile', identityFile);
+            }
+            if (licenseFile) {
+                formDataToSend.append('licenseFile', licenseFile);
+            }
+
+            // Send to backend
             const response = await fetch('/api/send-email', {
                 method: 'POST',
-                body: formDataToSend
+                body: formDataToSend,
             });
 
             // Check for JSON content type
@@ -698,12 +742,67 @@ const TT2112Form: React.FC = () => {
                                 <div className="relative">
                                     <InputField
                                         label="Email"
-                                        name="email"
-                                        value={formData.email || ''}
-                                        error={errors.email}
+                                        name="emailUtente"
+                                        value={formData.emailUtente || ''}
+                                        error={errors.emailUtente}
                                         onChange={handleChange}
                                         placeholder="esempio@email.com"
                                     />
+                                </div>
+                            </div>
+
+                            {/* Section Allegati */}
+                            <div className="space-y-4 mt-8">
+                                <h3 className="text-sm font-bold text-slate-900 border-b pb-2 flex items-center gap-2">
+                                    <FileText size={16} /> Allegati
+                                </h3>
+                                <div className="grid grid-cols-1 gap-4">
+                                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm text-blue-800 mb-2">
+                                        <p className="font-bold mb-1">Istruzioni caricamento:</p>
+                                        <ul className="list-disc list-inside space-y-1 text-blue-700">
+                                            <li>Formati accettati: PDF, JPG, PNG</li>
+                                            <li>Dimensione massima per file: 5MB</li>
+                                            <li>Caricare scansioni leggibili fronte/retro</li>
+                                        </ul>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                                            Documento d'Identità (Fronte/Retro)
+                                        </label>
+                                        <input
+                                            type="file"
+                                            accept="image/*,application/pdf"
+                                            onChange={(e) => handleFileUpload(e, 'identity')}
+                                            className="block w-full text-sm text-slate-500
+                                                file:mr-4 file:py-2.5 file:px-4
+                                                file:rounded-lg file:border-0
+                                                file:text-sm file:font-bold
+                                                file:bg-blue-50 file:text-blue-700
+                                                hover:file:bg-blue-100
+                                                cursor-pointer border border-slate-200 rounded-lg"
+                                        />
+                                        {errors.identityFile && <p className="text-red-500 text-xs mt-1">{errors.identityFile}</p>}
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                                            Patente (se presente)
+                                        </label>
+                                        <input
+                                            type="file"
+                                            accept="application/pdf"
+                                            onChange={handleTemplateFileChange}
+                                            className="block w-full text-sm text-slate-500
+                                                file:mr-4 file:py-2.5 file:px-4
+                                                file:rounded-full file:border-0
+                                                file:text-sm file:font-semibold
+                                                file:bg-blue-50 file:text-blue-700
+                                                hover:file:bg-blue-100
+                                                cursor-pointer"
+                                        />
+                                        {errors.licenseFile && <p className="text-red-500 text-xs mt-1">{errors.licenseFile}</p>}
+                                    </div>
                                 </div>
                             </div>
                             <p className="text-[10px] text-slate-400 italic">

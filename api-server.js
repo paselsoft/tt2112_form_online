@@ -77,107 +77,49 @@ console.log('[SYSTEM] Inizializzazione Server...');
     app.use(express.static(distPath));
 
     // 5. ENDPOINT EMAIL
-    app.post('/api/send-email', upload.single('pdf'), async (req, res) => {
+    // Configurazione Multer per gestire upload multipli
+    const uploadFields = upload.fields([
+      { name: 'pdf', maxCount: 1 },
+      { name: 'identityFile', maxCount: 1 },
+      { name: 'licenseFile', maxCount: 1 }
+    ]);
+
+    app.post('/api/send-email', uploadFields, async (req, res) => {
       console.log('[API] Richiesta POST /api/send-email ricevuta');
 
       try {
-        // Controllo File
-        if (!req.file) {
-          console.warn('[API WARN] Nessun PDF allegato');
-          return res.status(400).json({ error: 'File PDF mancante' });
-        }
-
-        // Recupero Dati
-        const { nome, cognome, emailUtente, telefono } = req.body;
-
-        // Recupero Credenziali (Secure)
-        const emailUser = process.env.EMAIL_USER;
-        const emailPass = process.env.EMAIL_PASS;
-        const emailHost = process.env.EMAIL_HOST || 'smtp.gmail.com';
-        const emailFrom = process.env.EMAIL_FROM || `"TT2112 Digitale" <${emailUser}>`;
-
-        // Verifica Credenziali
-        if (!emailUser || !emailPass) {
-          console.error('[API ERROR] Variabili ambiente EMAIL_USER/EMAIL_PASS mancanti!');
-          // Ritorniamo 503 Service Unavailable invece di 500 generico
-          return res.status(503).json({
-            error: 'Configurazione server incompleta. Contatta l\'amministratore.'
-          });
-        }
-
-        // Configurazione Trasporto SMTP
-        const transporter = nodemailer.createTransport({
-          host: emailHost,
-          port: 465, // SSL
-          secure: true,
-          auth: {
-            user: emailUser,
-            pass: emailPass,
-          },
-        });
-
-        // Opzioni Email
-        const mailOptions = {
-          from: emailFrom,
-          to: 'paolo.selvaggini@mit.gov.it', // Destinatario fisso
-          replyTo: emailUtente || undefined,
-          subject: `Nuova Pratica TT2112: ${cognome} ${nome}`,
-          text: `Nuova pratica inviata dal sistema digitale.\n\nRichiedente: ${nome} ${cognome}\nEmail: ${emailUtente}\nTelefono: ${telefono}\n\nIn allegato il modulo PDF compilato.`,
-          attachments: [
-            {
-              filename: `TT2112_${cognome}_${nome}.pdf`,
-              content: req.file.buffer,
-              contentType: 'application/pdf',
-            },
-          ],
-        };
-
-        // Verifica connessione SMTP prima dell'invio
-        try {
-          await transporter.verify();
-          console.log('[API] Connessione SMTP verificata');
-        } catch (verifyError) {
-          console.error('[API ERROR] Errore connessione SMTP:', verifyError);
-          return res.status(502).json({ error: 'Impossibile connettersi al server di posta (Gmail).' });
-        }
-
-        // Invio Effettivo
-        const info = await transporter.sendMail(mailOptions);
-        console.log(`[API] Email inviata con successo. ID: ${info.messageId}`);
-
-        res.status(200).json({
-          success: true,
+        success: true,
           message: 'Email inviata correttamente',
-          id: info.messageId
-        });
+            id: info.messageId
+      });
 
-      } catch (error) {
-        console.error('[API FATAL]', error);
-        res.status(500).json({ error: 'Errore interno del server durante l\'invio.' });
-      }
-    });
+  } catch (error) {
+    console.error('[API FATAL]', error);
+    res.status(500).json({ error: 'Errore interno del server durante l\'invio.' });
+  }
+});
 
-    // 6. FALLBACK ROUTE (SPA)
-    // Importante: deve essere l'ultima route definita
-    app.get('*', (req, res) => {
-      console.log(`[DEBUG] Fallback route hit for: ${req.path}`);
-      const indexDist = path.join(distPath, 'index.html');
-      if (fs.existsSync(indexDist)) {
-        res.sendFile(indexDist);
-      } else {
-        console.error(`[ERROR] index.html non trovato in build_output: ${indexDist}`);
-        res.status(404).send('Application not built correctly. index.html missing.');
-      }
-    });
+// 6. FALLBACK ROUTE (SPA)
+// Importante: deve essere l'ultima route definita
+app.get('*', (req, res) => {
+  console.log(`[DEBUG] Fallback route hit for: ${req.path}`);
+  const indexDist = path.join(distPath, 'index.html');
+  if (fs.existsSync(indexDist)) {
+    res.sendFile(indexDist);
+  } else {
+    console.error(`[ERROR] index.html non trovato in build_output: ${indexDist}`);
+    res.status(404).send('Application not built correctly. index.html missing.');
+  }
+});
 
-    // 7. AVVIO LISTENER
-    app.listen(PORT, () => {
-      console.log(`[SYSTEM] Server attivo e in ascolto su porta ${PORT}`);
-      console.log(`[SYSTEM] URL locale: http://localhost:${PORT}`);
-    });
+// 7. AVVIO LISTENER
+app.listen(PORT, () => {
+  console.log(`[SYSTEM] Server attivo e in ascolto su porta ${PORT}`);
+  console.log(`[SYSTEM] URL locale: http://localhost:${PORT}`);
+});
 
   } catch (err) {
-    console.error('[SYSTEM CRITICAL] Il server non è riuscito ad avviarsi:', err);
-    process.exit(1);
-  }
-})();
+  console.error('[SYSTEM CRITICAL] Il server non è riuscito ad avviarsi:', err);
+  process.exit(1);
+}
+}) ();
