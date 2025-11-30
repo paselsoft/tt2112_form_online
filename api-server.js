@@ -137,6 +137,15 @@ console.log('[SYSTEM] Inizializzazione Server...');
           });
         });
 
+        // Calcola dimensione totale allegati
+        const totalSize = attachments.reduce((acc, curr) => acc + curr.content.length, 0);
+        console.log(`[API DEBUG] Total attachments size: ${(totalSize / 1024 / 1024).toFixed(2)} MB`);
+
+        if (totalSize > 20 * 1024 * 1024) {
+          console.error('[API ERROR] Attachments too large');
+          return res.status(400).json({ error: 'La dimensione totale degli allegati supera i 20MB. Riprova con meno file.' });
+        }
+
         // Configurazione Email
         const mailOptions = {
           from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
