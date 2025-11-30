@@ -6,6 +6,7 @@ import { Download, Send, RefreshCw, AlertCircle, CheckCircle, Upload, MapPin, Ph
 import AutocompleteInput from './AutocompleteInput';
 import ThemeToggle from './ThemeToggle';
 import { searchComuni, getCapByComune, getProvinciaByComune } from '../services/comuniData';
+import { compressImage } from '../utils/imageCompression';
 
 // Optimized helper for base64 conversion to avoid stack overflow or UI freeze with large files
 const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
@@ -258,7 +259,7 @@ const TT2112Form: React.FC = () => {
         setComuniResidenzaSuggestions([]);
     }, []);
 
-    import { compressImage } from '../utils/imageCompression';
+
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'identity' | 'license') => {
         if (e.target.files && e.target.files.length > 0) {
