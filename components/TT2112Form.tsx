@@ -97,9 +97,20 @@ const TT2112Form: React.FC = () => {
     const [showPreview, setShowPreview] = useState(false);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
+    // Auto-save state
+    const [lastSaved, setLastSaved] = useState<Date | null>(null);
+
     // Cache key versioning to handle template updates - BUMPED TO V25
     const CACHE_KEY = 'tt2112_template_v25';
 
+    // Save draft on change
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
+            setLastSaved(new Date());
+        }, 500); // Debounce save
+        return () => clearTimeout(timeoutId);
+    }, [formData]);
     // Load template logic
     useEffect(() => {
         let isMounted = true;
@@ -1108,6 +1119,12 @@ const TT2112Form: React.FC = () => {
 
                 {/* Footer Controls */}
                 <div className="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 shrink-0 space-y-3 transition-colors">
+                    {lastSaved && (
+                        <div className="text-center text-[10px] text-slate-400 flex items-center justify-center gap-1">
+                            <CheckCircle size={10} />
+                            Bozza salvata alle {lastSaved.toLocaleTimeString()}
+                        </div>
+                    )}
                     <button
                         onClick={() => setShowCalibration(!showCalibration)}
                         className="w-full flex items-center justify-center gap-2 text-xs font-bold text-slate-500 hover:text-blue-600 mb-2 transition-colors"
