@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { TT2112Data, INITIAL_DATA, RequestType, Gender, ValidationErrors } from '../types';
 import { generateTT2112PDF } from '../services/pdfService';
 import { PDF_TEMPLATE_URL } from '../services/embeddedTemplate';
-import { Download, Send, RefreshCw, AlertCircle, CheckCircle, Upload, MapPin, Phone, FileText, User, Bug, FileUp, Wand2, Settings, Trash2, Mail, Loader2, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Download, Send, RefreshCw, AlertCircle, CheckCircle, Upload, MapPin, Phone, FileText, User, Bug, FileUp, Wand2, Settings, Trash2, Mail, Loader2, AlertTriangle, ExternalLink, ChevronDown } from 'lucide-react';
 import AutocompleteInput from './AutocompleteInput';
 import ThemeToggle from './ThemeToggle';
 import { searchComuni, getCapByComune, getProvinciaByComune } from '../services/comuniData';
@@ -588,16 +588,23 @@ const TT2112Form: React.FC = () => {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Sesso</label>
-                                    <select
-                                        name="sesso"
-                                        value={formData.sesso}
-                                        onChange={handleChange}
-                                        className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-sm font-bold text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50"
-                                    >
-                                        <option value={Gender.M}>M</option>
-                                        <option value={Gender.F}>F</option>
-                                    </select>
+                                    <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 transition-colors">Sesso</label>
+                                    <div className="relative">
+                                        <select
+                                            name="sesso"
+                                            value={formData.sesso}
+                                            onChange={handleChange}
+                                            className="w-full px-3 py-2.5 rounded-lg outline-none transition-all shadow-sm uppercase font-bold text-base sm:text-sm appearance-none 
+                                            bg-white dark:bg-slate-900 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-600 
+                                            focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-50 dark:focus:ring-blue-900/30"
+                                        >
+                                            <option value="M">M</option>
+                                            <option value="F">F</option>
+                                        </select>
+                                        <div className="absolute right-3 top-3 pointer-events-none text-slate-400 dark:text-slate-500">
+                                            <ChevronDown size={16} />
+                                        </div>
+                                    </div>
                                 </div>
                                 <InputField
                                     label="Data Nascita"
@@ -769,7 +776,7 @@ const TT2112Form: React.FC = () => {
                                             type="file"
                                             accept="image/*,application/pdf"
                                             onChange={(e) => handleFileUpload(e, 'identity')}
-                                            className="block w-full text-sm text-slate-500 dark:text-slate-400
+                                            className="block w-full text-sm text-slate-500 dark:text-slate-200
                                                 file:mr-4 file:py-2.5 file:px-4
                                                 file:rounded-lg file:border-0
                                                 file:text-sm file:font-bold
@@ -788,7 +795,7 @@ const TT2112Form: React.FC = () => {
                                             type="file"
                                             accept="image/*,application/pdf"
                                             onChange={(e) => handleFileUpload(e, 'license')}
-                                            className="block w-full text-sm text-slate-500 dark:text-slate-400
+                                            className="block w-full text-sm text-slate-500 dark:text-slate-200
                                                 file:mr-4 file:py-2.5 file:px-4
                                                 file:rounded-lg file:border-0
                                                 file:text-sm file:font-bold
