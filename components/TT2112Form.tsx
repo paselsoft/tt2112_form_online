@@ -483,13 +483,16 @@ const TT2112Form: React.FC = () => {
                             <p className="text-xs text-slate-400 hidden sm:block">Compila i campi sottostanti</p>
                         </div>
                     </div>
-                    <button
-                        onClick={handleFillRandomData}
-                        className="text-xs font-medium px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-md transition-colors flex items-center gap-2"
-                    >
-                        <Wand2 size={14} />
-                        <span>Auto</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <ThemeToggle />
+                        <button
+                            onClick={handleFillRandomData}
+                            className="text-xs font-medium px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-md transition-colors flex items-center gap-2"
+                        >
+                            <Wand2 size={14} />
+                            <span>Auto</span>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Scrollable Content */}

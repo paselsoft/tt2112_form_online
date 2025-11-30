@@ -33,7 +33,12 @@ async function loadComuni(): Promise<Comune[]> {
         if (!response.ok) {
             throw new Error('Failed to load comuni data');
         }
-        comuniCache = await response.json();
+        const data = await response.json();
+        if (!Array.isArray(data)) {
+            console.error('comuni.json is not an array');
+            return [];
+        }
+        comuniCache = data;
         return comuniCache || [];
     } catch (error) {
         console.error('Error loading comuni:', error);
