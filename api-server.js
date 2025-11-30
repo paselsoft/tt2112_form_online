@@ -78,13 +78,10 @@ console.log('[SYSTEM] Inizializzazione Server...');
 
     // 5. ENDPOINT EMAIL
     // Configurazione Multer per gestire upload multipli
-    const uploadFields = upload.fields([
-      { name: 'pdf', maxCount: 1 },
-      { name: 'identityFile', maxCount: 5 }, // Increased maxCount to allow multiple files (front/back)
-      { name: 'licenseFile', maxCount: 5 }
-    ]);
+    // USIAMO upload.any() per la massima flessibilità e debug
+    const uploadAny = upload.any();
 
-    app.post('/api/send-email', uploadFields, async (req, res) => {
+    app.post('/api/send-email', uploadAny, async (req, res) => {
       console.log('[API] Richiesta POST /api/send-email ricevuta');
 
       try {
@@ -105,49 +102,40 @@ console.log('[SYSTEM] Inizializzazione Server...');
         console.log('[API] Connessione SMTP verificata');
 
         const { emailUtente, nome, cognome } = req.body;
-        const files = req.files;
+        const files = req.files || []; // Con upload.any(), req.files è un array
 
-        // DEBUG: Log received files
-        console.log('[API DEBUG] Files received keys:', Object.keys(files || {}));
-        if (files['identityFile']) {
-          console.log(`[API DEBUG] identityFile count: ${files['identityFile'].length}`);
-          files['identityFile'].forEach(f => console.log(`[API DEBUG] identityFile: ${f.originalname} (${f.size} bytes)`));
-        } else {
-          console.log('[API DEBUG] identityFile MISSING in req.files');
-        }
-        if (files['licenseFile']) {
-          console.log(`[API DEBUG] licenseFile count: ${files['licenseFile'].length}`);
-          files['licenseFile'].forEach(f => console.log(`[API DEBUG] licenseFile: ${f.originalname} (${f.size} bytes)`));
-        }
+        console.log(`[API DEBUG] Files received count: ${files.length}`);
+        files.forEach(f => console.log(`[API DEBUG] File: ${f.fieldname} - ${f.originalname} (${f.size} bytes)`));
 
         // Costruzione allegati
         const attachments = [];
-        if (files['pdf'] && files['pdf'][0]) {
+
+        // Filtra e aggiungi PDF
+        const pdfFile = files.find(f => f.fieldname === 'pdf');
+        if (pdfFile) {
           attachments.push({
             filename: 'Modulo_TT2112.pdf',
-            content: files['pdf'][0].buffer,
+            content: pdfFile.buffer,
           });
         }
 
-        // Handle multiple identity files
-        if (files['identityFile']) {
-          files['identityFile'].forEach((file, index) => {
-            attachments.push({
-              filename: `Documento_Identita_${index + 1}_${file.originalname}`,
-              content: file.buffer,
-            });
+        // Filtra e aggiungi Documenti Identità
+        const identityFiles = files.filter(f => f.fieldname === 'identityFile');
+        identityFiles.forEach((file, index) => {
+          attachments.push({
+            filename: `Documento_Identita_${index + 1}_${file.originalname}`,
+            content: file.buffer,
           });
-        }
+        });
 
-        // Handle multiple license files
-        if (files['licenseFile']) {
-          files['licenseFile'].forEach((file, index) => {
-            attachments.push({
-              filename: `Patente_${index + 1}_${file.originalname}`,
-              content: file.buffer,
-            });
+        // Filtra e aggiungi Patente
+        const licenseFiles = files.filter(f => f.fieldname === 'licenseFile');
+        licenseFiles.forEach((file, index) => {
+          attachments.push({
+            filename: `Patente_${index + 1}_${file.originalname}`,
+            content: file.buffer,
           });
-        }
+        });
 
         // Configurazione Email
         const mailOptions = {
