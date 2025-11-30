@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { TT2112Data, INITIAL_DATA, RequestType, Gender, ValidationErrors } from '../types';
 import { generateTT2112PDF } from '../services/pdfService';
 import { PDF_TEMPLATE_URL } from '../services/embeddedTemplate';
-import { Download, Send, RefreshCw, AlertCircle, CheckCircle, Upload, MapPin, Phone, FileText, User, Bug, FileUp, Wand2, Settings, Trash2, Mail, Loader2, AlertTriangle, ExternalLink, ChevronDown } from 'lucide-react';
+import { Download, Send, RefreshCw, AlertCircle, CheckCircle, Upload, MapPin, Phone, FileText, User, Bug, FileUp, Wand2, Settings, Trash2, Mail, Loader2, AlertTriangle, ExternalLink, ChevronDown, X } from 'lucide-react';
 import AutocompleteInput from './AutocompleteInput';
 import ThemeToggle from './ThemeToggle';
 import { searchComuni, getCapByComune, getProvinciaByComune } from '../services/comuniData';
@@ -91,6 +91,10 @@ const TT2112Form: React.FC = () => {
     const [licenseFiles, setLicenseFiles] = useState<File[]>([]);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Preview State
+    const [showPreview, setShowPreview] = useState(false);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
     // Cache key versioning to handle template updates - BUMPED TO V25
     const CACHE_KEY = 'tt2112_template_v25';
@@ -254,19 +258,39 @@ const TT2112Form: React.FC = () => {
         setComuniResidenzaSuggestions([]);
     }, []);
 
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'identity' | 'license') => {
-        if (e.target.files && e.target.files.length > 0) {
-            const newFiles = Array.from(e.target.files);
+    import { compressImage } from '../utils/imageCompression';
 
-            // Validation: Max 5MB per file
-            const invalidFiles = newFiles.filter(file => file.size > 5 * 1024 * 1024);
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'identity' | 'license') => {
+        if (e.target.files && e.target.files.length > 0) {
+            const rawFiles = Array.from(e.target.files);
+
+            // Validation: Max 10MB per file (increased limit because we compress)
+            // But we check raw size first to avoid crashing browser with massive files
+            const invalidFiles = rawFiles.filter(file => file.size > 10 * 1024 * 1024);
             if (invalidFiles.length > 0) {
                 setErrors(prev => ({
                     ...prev,
-                    [type === 'identity' ? 'identityFile' : 'licenseFile']: `Uno o più file superano il limite di 5MB`
+                    [type === 'identity' ? 'identityFile' : 'licenseFile']: `Uno o più file sono troppo grandi (>10MB)`
                 }));
-                e.target.value = ''; // Reset input
+                e.target.value = '';
                 return;
+            }
+
+            // Compress images
+            const processedFiles: File[] = [];
+            for (const file of rawFiles) {
+                if (file.type.startsWith('image/')) {
+                    try {
+                        const compressed = await compressImage(file);
+                        processedFiles.push(compressed);
+                        console.log(`Compresso: ${file.name} (${(file.size / 1024).toFixed(0)}KB -> ${(compressed.size / 1024).toFixed(0)}KB)`);
+                    } catch (err) {
+                        console.error("Errore compressione", err);
+                        processedFiles.push(file); // Fallback to original
+                    }
+                } else {
+                    processedFiles.push(file);
+                }
             }
 
             // Clear error
@@ -277,11 +301,11 @@ const TT2112Form: React.FC = () => {
             });
 
             if (type === 'identity') {
-                setIdentityFiles(prev => [...prev, ...newFiles]);
+                setIdentityFiles(prev => [...prev, ...processedFiles]);
             } else {
-                setLicenseFiles(prev => [...prev, ...newFiles]);
+                setLicenseFiles(prev => [...prev, ...processedFiles]);
             }
-            // Reset input value to allow selecting the same file again if needed
+            // Reset input value
             e.target.value = '';
         }
     };
@@ -399,6 +423,23 @@ const TT2112Form: React.FC = () => {
         }
     };
 
+    const handlePreview = async () => {
+        if (!pdfTemplate) {
+            alert("Modello PDF non caricato.");
+            return;
+        }
+        try {
+            const pdfBytes = await generateTT2112PDF(formData, pdfTemplate);
+            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            setPreviewUrl(url);
+            setShowPreview(true);
+        } catch (err) {
+            console.error("Errore generazione anteprima", err);
+            alert("Errore durante la generazione dell'anteprima.");
+        }
+    };
+
     const handleSendEmail = async () => {
         if (!pdfTemplate) {
             alert("Attendi il caricamento del modello.");
@@ -453,7 +494,10 @@ const TT2112Form: React.FC = () => {
                     throw new Error(result.error || "Errore sconosciuto dal server");
                 }
                 setEmailStatus('success');
-                setEmailMessage("Pratica inviata correttamente all'ufficio!");
+                setEmailMessage("Email inviata con successo! Controlla la tua casella di posta (anche lo spam).");
+                // Clear draft
+                localStorage.removeItem(DRAFT_KEY);
+                // Optional: Reset form? For now, we keep it filled as user might want to see what they sent.
             } else {
                 // Response is not JSON (likely HTML 404/500 from static host)
                 throw new Error("API non disponibile.");
@@ -982,6 +1026,84 @@ const TT2112Form: React.FC = () => {
                         </div>
                     </div>
                 </div>
+                {/* Submit Button & Preview */}
+                <div className="flex gap-3">
+                    <button
+                        onClick={handlePreview}
+                        disabled={isSendingEmail}
+                        className="flex-1 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold py-4 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600 transition-all flex items-center justify-center gap-2"
+                    >
+                        <FileText size={20} />
+                        Anteprima
+                    </button>
+                    <button
+                        onClick={handleSendEmail}
+                        disabled={isSendingEmail}
+                        className={`flex-[2] font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2
+                            ${isSendingEmail
+                                ? 'bg-slate-400 cursor-not-allowed'
+                                : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white'
+                            }`}
+                    >
+                        {isSendingEmail ? (
+                            <>
+                                <Loader2 className="animate-spin" />
+                                Invio in corso...
+                            </>
+                        ) : (
+                            <>
+                                <Send size={20} />
+                                Invia Modulo
+                            </>
+                        )}
+                    </button>
+                </div>
+
+                {/* Preview Modal */}
+                {showPreview && previewUrl && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+                        <div className="bg-white dark:bg-slate-900 w-full max-w-4xl h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+                            <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800">
+                                <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
+                                    <FileText className="text-blue-500" />
+                                    Anteprima Modulo
+                                </h3>
+                                <button
+                                    onClick={() => setShowPreview(false)}
+                                    className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors"
+                                >
+                                    <X size={24} className="text-slate-500 dark:text-slate-400" />
+                                    <span className="sr-only">Chiudi</span>
+                                </button>
+                            </div>
+                            <div className="flex-1 bg-slate-100 dark:bg-slate-950 p-4">
+                                <iframe
+                                    src={previewUrl}
+                                    className="w-full h-full rounded-lg border border-slate-200 dark:border-slate-700 shadow-inner"
+                                    title="Anteprima PDF"
+                                />
+                            </div>
+                            <div className="p-4 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3 bg-slate-50 dark:bg-slate-800">
+                                <button
+                                    onClick={() => setShowPreview(false)}
+                                    className="px-6 py-2 rounded-lg font-bold text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
+                                >
+                                    Chiudi
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowPreview(false);
+                                        handleSendEmail();
+                                    }}
+                                    className="px-6 py-2 rounded-lg font-bold bg-blue-600 text-white hover:bg-blue-500 transition-colors flex items-center gap-2"
+                                >
+                                    <Send size={18} />
+                                    Invia Ora
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Footer Controls */}
                 <div className="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 shrink-0 space-y-3 transition-colors">
