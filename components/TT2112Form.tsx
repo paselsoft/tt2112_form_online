@@ -8,6 +8,8 @@ import ThemeToggle from './ThemeToggle';
 import { searchComuni, getCapByComune, getProvinciaByComune } from '../services/comuniData';
 import { compressImage } from '../utils/imageCompression';
 
+const DRAFT_KEY = 'tt2112_draft_data_v1';
+
 // Optimized helper for base64 conversion to avoid stack overflow or UI freeze with large files
 const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
     let binary = '';
@@ -99,16 +101,23 @@ const TT2112Form: React.FC = () => {
 
     // Auto-save state
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
+    const [saveError, setSaveError] = useState<string | null>(null);
 
     // Cache key versioning to handle template updates - BUMPED TO V25
-    const CACHE_KEY = 'tt2112_template_v25';
     const DRAFT_KEY = 'tt2112_draft_data_v1';
+    const CACHE_KEY = 'tt2112_template_v25';
 
     // Save draft on change
     useEffect(() => {
         const timeoutId = setTimeout(() => {
-            localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
-            setLastSaved(new Date());
+            try {
+                localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
+                setLastSaved(new Date());
+                setSaveError(null);
+            } catch (err) {
+                console.error("Auto-save failed", err);
+                setSaveError("Impossibile salvare la bozza (localStorage disabilitato?)");
+            }
         }, 500); // Debounce save
         return () => clearTimeout(timeoutId);
     }, [formData]);
@@ -1120,7 +1129,13 @@ const TT2112Form: React.FC = () => {
 
                 {/* Footer Controls */}
                 <div className="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 shrink-0 space-y-3 transition-colors">
-                    {lastSaved && (
+                    {saveError && (
+                        <div className="text-center text-[10px] text-red-500 flex items-center justify-center gap-1">
+                            <AlertCircle size={10} />
+                            {saveError}
+                        </div>
+                    )}
+                    {lastSaved && !saveError && (
                         <div className="text-center text-[10px] text-slate-400 flex items-center justify-center gap-1">
                             <CheckCircle size={10} />
                             Bozza salvata alle {lastSaved.toLocaleTimeString()}
