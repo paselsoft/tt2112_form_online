@@ -823,10 +823,11 @@ const TT2112Form: React.FC = () => {
                                                             </div>
                                                             <button
                                                                 onClick={() => removeFile('identity', index)}
-                                                                className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 text-slate-400 hover:text-red-500 rounded transition-colors"
+                                                                className="p-1.5 bg-white dark:bg-slate-700 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-500 rounded-md border border-slate-200 dark:border-slate-600 transition-all shadow-sm"
                                                                 title="Rimuovi file"
+                                                                type="button" // Explicitly set type="button" to prevent form submission
                                                             >
-                                                                <Trash2 size={14} />
+                                                                <Trash2 size={16} />
                                                             </button>
                                                         </div>
                                                     ))}
@@ -871,10 +872,11 @@ const TT2112Form: React.FC = () => {
                                                             </div>
                                                             <button
                                                                 onClick={() => removeFile('license', index)}
-                                                                className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 text-slate-400 hover:text-red-500 rounded transition-colors"
+                                                                className="p-1.5 bg-white dark:bg-slate-700 hover:bg-red-50 dark:hover:bg-red-900/30 text-red-500 rounded-md border border-slate-200 dark:border-slate-600 transition-all shadow-sm"
                                                                 title="Rimuovi file"
+                                                                type="button"
                                                             >
-                                                                <Trash2 size={14} />
+                                                                <Trash2 size={16} />
                                                             </button>
                                                         </div>
                                                     ))}
