@@ -102,6 +102,7 @@ const TT2112Form: React.FC = () => {
 
     // Cache key versioning to handle template updates - BUMPED TO V25
     const CACHE_KEY = 'tt2112_template_v25';
+    const DRAFT_KEY = 'tt2112_draft_data_v1';
 
     // Save draft on change
     useEffect(() => {
