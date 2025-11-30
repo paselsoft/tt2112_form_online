@@ -55,7 +55,7 @@ const InputField = ({ label, name, value, error, onChange, type = "text", placeh
             value={value}
             onChange={onChange}
             maxLength={maxLength}
-            className={`w-full px-3 py-2.5 rounded-lg outline-none transition-all shadow-sm uppercase font-bold text-sm 
+            className={`w-full px-3 py-2.5 rounded-lg outline-none transition-all shadow-sm uppercase font-bold text-base sm:text-sm appearance-none 
                 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 placeholder-slate-300 dark:placeholder-slate-600
                 ${error
                     ? 'border border-red-400 dark:border-red-500 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-900/30'
