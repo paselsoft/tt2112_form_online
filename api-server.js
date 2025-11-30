@@ -131,7 +131,7 @@ console.log('[SYSTEM] Inizializzazione Server...');
         // Configurazione Email
         const mailOptions = {
           from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-          to: process.env.EMAIL_TO || 'paolopasello@gmail.com', // Destinatario default (es. ufficio)
+          to: process.env.EMAIL_TO || 'paolo.selvaggini@mit.gov.it', // Destinatario Ufficio MIT
           replyTo: emailUtente, // Rispondi all'utente
           subject: `Nuova Pratica TT2112: ${cognome} ${nome}`,
           text: `È stata inviata una nuova pratica TT2112.\n\nRichiedente: ${nome} ${cognome}\nEmail: ${emailUtente}\n\nIn allegato trovi il modulo compilato e i documenti.`,
