@@ -88,6 +88,56 @@ console.log('[SYSTEM] Inizializzazione Server...');
       console.log('[API] Richiesta POST /api/send-email ricevuta');
 
       try {
+        // Configurazione Transporter (Nodemailer)
+        // Utilizza le variabili d'ambiente definite in .env.local (o Cloud Run)
+        const transporter = nodemailer.createTransport({
+          host: process.env.EMAIL_HOST,
+          port: parseInt(process.env.EMAIL_PORT || '587'),
+          secure: process.env.EMAIL_SECURE === 'true', // true per 465, false per altri
+          auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+          },
+        });
+
+        // Verifica connessione SMTP
+        await transporter.verify();
+        console.log('[API] Connessione SMTP verificata');
+
+        const { emailUtente, nome, cognome } = req.body;
+        const files = req.files;
+
+        // Costruzione allegati
+        const attachments = [];
+        if (files['pdf'] && files['pdf'][0]) {
+          attachments.push({
+            filename: 'Modulo_TT2112.pdf',
+            content: files['pdf'][0].buffer,
+          });
+        }
+        if (files['identityFile'] && files['identityFile'][0]) {
+          attachments.push({
+            filename: `Documento_Identita_${files['identityFile'][0].originalname}`,
+            content: files['identityFile'][0].buffer,
+          });
+        }
+        if (files['licenseFile'] && files['licenseFile'][0]) {
+          attachments.push({
+            filename: `Patente_${files['licenseFile'][0].originalname}`,
+            content: files['licenseFile'][0].buffer,
+          });
+        }
+
+        // Configurazione Email
+        const mailOptions = {
+          from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+          to: process.env.EMAIL_TO || 'paolopasello@gmail.com', // Destinatario default (es. ufficio)
+          replyTo: emailUtente, // Rispondi all'utente
+          subject: `Nuova Pratica TT2112: ${cognome} ${nome}`,
+          text: `È stata inviata una nuova pratica TT2112.\n\nRichiedente: ${nome} ${cognome}\nEmail: ${emailUtente}\n\nIn allegato trovi il modulo compilato e i documenti.`,
+          attachments: attachments,
+        };
+
         // Invio Effettivo
         const info = await transporter.sendMail(mailOptions);
         console.log(`[API] Email inviata con successo. ID: ${info.messageId}`);
@@ -100,7 +150,7 @@ console.log('[SYSTEM] Inizializzazione Server...');
 
       } catch (error) {
         console.error('[API FATAL]', error);
-        res.status(500).json({ error: 'Errore interno del server durante l\'invio.' });
+        res.status(500).json({ error: 'Errore interno del server durante l\'invio: ' + error.message });
       }
     });
 
