@@ -102,8 +102,8 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
 
     return (
         <div className={width} ref={wrapperRef}>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-                {label} {error && <span className="text-red-600 normal-case ml-1">({error})</span>}
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 transition-colors">
+                {label} {error && <span className="text-red-600 dark:text-red-400 normal-case ml-1">({error})</span>}
             </label>
             <div className="relative">
                 <input
@@ -116,28 +116,39 @@ const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
                     onFocus={() => value && value.length >= 2 && setIsOpen(true)}
                     maxLength={maxLength}
                     autoComplete="off"
-                    className={`w-full px-3 py-2.5 pr-10 rounded-lg outline-none transition-all shadow-sm uppercase font-bold text-sm bg-white text-slate-800 placeholder-slate-300 ${error
-                        ? 'border border-red-400 focus:ring-2 focus:ring-red-100'
-                        : 'border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-50'
+                    className={`w-full px-3 py-2.5 pr-10 rounded-lg outline-none transition-all shadow-sm uppercase font-bold text-sm 
+                        bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 placeholder-slate-300 dark:placeholder-slate-600
+                        ${error
+                            ? 'border border-red-400 dark:border-red-500 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-900/30'
+                            : 'border border-slate-200 dark:border-slate-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-50 dark:focus:ring-blue-900/30'
                         }`}
                     placeholder={placeholder}
                 />
-                <ChevronDown
-                    size={16}
-                    className={`absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''
-                        }`}
-                />
+                {value && (
+                    <button
+                        type="button"
+                        onClick={() => {
+                            onChange({ target: { name, value: '' } } as any);
+                            setIsOpen(false);
+                            inputRef.current?.focus();
+                        }}
+                        className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
+                    >
+                        <RefreshCw size={16} />
+                    </button>
+                )}
 
                 {isOpen && suggestions.length > 0 && (
-                    <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    <div className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg max-h-60 overflow-auto">
                         {suggestions.map((suggestion, index) => (
                             <button
                                 key={index}
                                 type="button"
                                 onClick={() => handleSelect(suggestion)}
-                                className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors ${index === highlightedIndex
-                                    ? 'bg-blue-50 text-blue-700'
-                                    : 'text-slate-700 hover:bg-slate-50'
+                                className={`w-full text-left px-4 py-2 text-sm font-medium uppercase transition-colors
+                                    ${index === highlightedIndex
+                                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
                                     }`}
                             >
                                 {suggestion}

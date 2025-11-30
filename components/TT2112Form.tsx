@@ -4,6 +4,7 @@ import { generateTT2112PDF } from '../services/pdfService';
 import { PDF_TEMPLATE_URL } from '../services/embeddedTemplate';
 import { Download, Send, RefreshCw, AlertCircle, CheckCircle, Upload, MapPin, Phone, FileText, User, Bug, FileUp, Wand2, Settings, Trash2, Mail, Loader2, AlertTriangle, ExternalLink } from 'lucide-react';
 import AutocompleteInput from './AutocompleteInput';
+import ThemeToggle from './ThemeToggle';
 import { searchComuni, getCapByComune, getProvinciaByComune } from '../services/comuniData';
 
 // Optimized helper for base64 conversion to avoid stack overflow or UI freeze with large files
@@ -43,35 +44,27 @@ interface InputFieldProps {
     width?: string;
 }
 
-const InputField = React.memo<InputFieldProps>(({
-    label,
-    name,
-    value,
-    error,
-    onChange,
-    placeholder,
-    maxLength,
-    width = "w-full"
-}) => (
-    <div className={width}>
-        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
-            {label} {error && <span className="text-red-600 normal-case ml-1">({error})</span>}
+const InputField = ({ label, name, value, error, onChange, type = "text", placeholder, maxLength, className = "" }: any) => (
+    <div className={className}>
+        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 transition-colors">
+            {label} {error && <span className="text-red-600 dark:text-red-400 normal-case ml-1">({error})</span>}
         </label>
         <input
-            type="text"
+            type={type}
             name={name}
-            value={value || ''}
+            value={value}
             onChange={onChange}
             maxLength={maxLength}
-            autoComplete="off"
-            className={`w-full px-3 py-2.5 rounded-lg outline-none transition-all shadow-sm uppercase font-bold text-sm bg-white text-slate-800 placeholder-slate-300 ${error
-                ? 'border border-red-400 focus:ring-2 focus:ring-red-100'
-                : 'border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-50'
+            className={`w-full px-3 py-2.5 rounded-lg outline-none transition-all shadow-sm uppercase font-bold text-sm 
+                bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 placeholder-slate-300 dark:placeholder-slate-600
+                ${error
+                    ? 'border border-red-400 dark:border-red-500 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-900/30'
+                    : 'border border-slate-200 dark:border-slate-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-50 dark:focus:ring-blue-900/30'
                 }`}
             placeholder={placeholder}
         />
     </div>
-));
+);
 
 const TT2112Form: React.FC = () => {
     const [formData, setFormData] = useState<TT2112Data>(INITIAL_DATA);
@@ -504,23 +497,23 @@ const TT2112Form: React.FC = () => {
 
                     {/* UPLOAD / LOADING SECTION */}
                     {!pdfTemplate ? (
-                        <div className={`p-6 rounded-xl border-2 border-dashed ${fetchError ? 'border-red-300 bg-red-50' : 'border-blue-300 bg-blue-50'} text-center relative overflow-hidden transition-colors`}>
+                        <div className={`p-6 rounded-xl border-2 border-dashed ${fetchError ? 'border-red-300 bg-red-50 dark:bg-red-900/10 dark:border-red-800' : 'border-blue-300 bg-blue-50 dark:bg-blue-900/10 dark:border-blue-800'} text-center relative overflow-hidden transition-colors`}>
                             {isLoadingTemplate && (
-                                <div className="absolute inset-0 bg-white/80 flex flex-col items-center justify-center z-10 backdrop-blur-sm">
-                                    <Loader2 size={32} className="text-blue-600 animate-spin mb-2" />
-                                    <span className="text-sm font-bold text-blue-800">Scaricamento Modello...</span>
+                                <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 flex flex-col items-center justify-center z-10 backdrop-blur-sm">
+                                    <Loader2 size={32} className="text-blue-600 dark:text-blue-400 animate-spin mb-2" />
+                                    <span className="text-sm font-bold text-blue-800 dark:text-blue-200">Scaricamento Modello...</span>
                                 </div>
                             )}
 
                             <div className="mb-3 flex justify-center">
-                                <div className={`p-3 rounded-full ${fetchError ? 'bg-red-100' : 'bg-blue-100'}`}>
-                                    {fetchError ? <AlertTriangle size={24} className="text-red-600" /> : <FileUp size={24} className="text-blue-600" />}
+                                <div className={`p-3 rounded-full ${fetchError ? 'bg-red-100 dark:bg-red-900/30' : 'bg-blue-100 dark:bg-blue-900/30'}`}>
+                                    {fetchError ? <AlertTriangle size={24} className="text-red-600 dark:text-red-400" /> : <FileUp size={24} className="text-blue-600 dark:text-blue-400" />}
                                 </div>
                             </div>
-                            <h3 className="text-sm font-bold text-blue-900 mb-1">
+                            <h3 className="text-sm font-bold text-blue-900 dark:text-blue-100 mb-1">
                                 {fetchError ? 'Errore Scaricamento' : 'Carica Modello TT2112'}
                             </h3>
-                            <p className={`text-xs ${fetchError ? 'text-red-700' : 'text-blue-700'} mb-4 px-8`}>
+                            <p className={`text-xs ${fetchError ? 'text-red-700 dark:text-red-300' : 'text-blue-700 dark:text-blue-300'} mb-4 px-8`}>
                                 {fetchError
                                     ? fetchError
                                     : (PDF_TEMPLATE_URL
@@ -537,30 +530,28 @@ const TT2112Form: React.FC = () => {
                             />
                             <button
                                 onClick={() => fileInputRef.current?.click()}
-                                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition-colors shadow-sm"
+                                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-lg text-sm font-bold transition-colors shadow-sm"
                             >
                                 Carica Manualmente PDF
                             </button>
                         </div>
                     ) : (
-                        <div className="p-4 rounded-xl border border-green-200 bg-green-50 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+                        <div className="p-4 rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 flex items-center justify-between animate-in fade-in slide-in-from-top-2 transition-colors">
                             <div className="flex items-center gap-3">
-                                <div className="p-2 bg-green-100 rounded-full">
-                                    <CheckCircle size={18} className="text-green-600" />
+                                <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-full">
+                                    <CheckCircle size={18} className="text-green-600 dark:text-green-400" />
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-bold text-green-900">Modello Pronto</h3>
-                                    <p className="text-xs text-green-700">
-                                        {usingEmbedded ? 'Modello ufficiale scaricato.' : 'Modello caricato dalla memoria locale.'}
-                                    </p>
+                                    <p className="text-sm font-bold text-green-800 dark:text-green-200">Modello Caricato</p>
+                                    <p className="text-xs text-green-600 dark:text-green-400">Pronto per la compilazione</p>
                                 </div>
                             </div>
-
                             <button
-                                onClick={handleResetTemplate}
-                                className="text-xs font-medium text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                                onClick={() => setPdfTemplate(null)}
+                                className="p-2 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 rounded-full transition-colors"
+                                title="Rimuovi modello"
                             >
-                                <Trash2 size={12} /> Reset
+                                <Trash2 size={18} />
                             </button>
                         </div>
                     )}
@@ -570,7 +561,7 @@ const TT2112Form: React.FC = () => {
 
                         {/* Section 1 */}
                         <div className="space-y-4">
-                            <h3 className="text-sm font-bold text-slate-900 border-b pb-2 flex items-center gap-2">
+                            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 border-b dark:border-slate-700 pb-2 flex items-center gap-2 transition-colors">
                                 <User size={16} /> Dati Anagrafici
                             </h3>
                             <div className="grid grid-cols-2 gap-4">
@@ -591,6 +582,36 @@ const TT2112Form: React.FC = () => {
                                     placeholder="MARIO"
                                 />
                             </div>
+                            const SelectField = ({label, name, value, options, error, onChange}: any) => (
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 transition-colors">
+                                    {label}
+                                </label>
+                                <div className="relative">
+                                    <select
+                                        name={name}
+                                        value={value}
+                                        onChange={onChange}
+                                        className={`w-full px-3 py-2.5 rounded-lg outline-none transition-all shadow-sm uppercase font-bold text-sm appearance-none 
+                    bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100
+                    ${error
+                                                ? 'border border-red-400 dark:border-red-500 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-900/30'
+                                                : 'border border-slate-200 dark:border-slate-600 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-50 dark:focus:ring-blue-900/30'
+                                            }`}
+                                    >
+                                        <option value="">Seleziona...</option>
+                                        {options.map((opt: string) => (
+                                            <option key={opt} value={opt}>{opt}</option>
+                                        ))}
+                                    </select>
+                                    <div className="absolute right-3 top-3 pointer-events-none text-slate-400 dark:text-slate-500">
+                                        <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                                            <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                            );
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Sesso</label>
@@ -664,7 +685,7 @@ const TT2112Form: React.FC = () => {
 
                         {/* Section 2 */}
                         <div className="space-y-4 mt-8">
-                            <h3 className="text-sm font-bold text-slate-900 border-b pb-2 flex items-center gap-2">
+                            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 border-b dark:border-slate-700 pb-2 flex items-center gap-2 transition-colors">
                                 <MapPin size={16} /> Residenza
                             </h3>
                             <div className="grid grid-cols-3 gap-3">
@@ -724,7 +745,7 @@ const TT2112Form: React.FC = () => {
 
                         {/* Section Recapiti */}
                         <div className="space-y-4 mt-8">
-                            <h3 className="text-sm font-bold text-slate-900 border-b pb-2 flex items-center gap-2">
+                            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 border-b dark:border-slate-700 pb-2 flex items-center gap-2 transition-colors">
                                 <Phone size={16} /> Recapiti
                             </h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -753,13 +774,13 @@ const TT2112Form: React.FC = () => {
 
                             {/* Section Allegati */}
                             <div className="space-y-4 mt-8">
-                                <h3 className="text-sm font-bold text-slate-900 border-b pb-2 flex items-center gap-2">
+                                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 border-b dark:border-slate-700 pb-2 flex items-center gap-2 transition-colors">
                                     <FileText size={16} /> Allegati
                                 </h3>
                                 <div className="grid grid-cols-1 gap-4">
-                                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm text-blue-800 mb-2">
+                                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800 text-sm text-blue-800 dark:text-blue-200 mb-2 transition-colors">
                                         <p className="font-bold mb-1">Istruzioni caricamento:</p>
-                                        <ul className="list-disc list-inside space-y-1 text-blue-700">
+                                        <ul className="list-disc list-inside space-y-1 text-blue-700 dark:text-blue-300">
                                             <li>Formati accettati: PDF, JPG, PNG</li>
                                             <li>Dimensione massima per file: 5MB</li>
                                             <li>Caricare scansioni leggibili fronte/retro</li>
@@ -767,45 +788,45 @@ const TT2112Form: React.FC = () => {
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 transition-colors">
                                             Documento d'Identità (Fronte/Retro)
                                         </label>
                                         <input
                                             type="file"
                                             accept="image/*,application/pdf"
                                             onChange={(e) => handleFileUpload(e, 'identity')}
-                                            className="block w-full text-sm text-slate-500
+                                            className="block w-full text-sm text-slate-500 dark:text-slate-400
                                                 file:mr-4 file:py-2.5 file:px-4
                                                 file:rounded-lg file:border-0
                                                 file:text-sm file:font-bold
-                                                file:bg-blue-50 file:text-blue-700
-                                                hover:file:bg-blue-100
-                                                cursor-pointer border border-slate-200 rounded-lg"
+                                                file:bg-blue-50 dark:file:bg-blue-900/30 file:text-blue-700 dark:file:text-blue-300
+                                                hover:file:bg-blue-100 dark:hover:file:bg-blue-900/50
+                                                cursor-pointer border border-slate-200 dark:border-slate-600 rounded-lg transition-colors"
                                         />
-                                        {errors.identityFile && <p className="text-red-500 text-xs mt-1">{errors.identityFile}</p>}
+                                        {errors.identityFile && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.identityFile}</p>}
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 transition-colors">
                                             Patente (se presente)
                                         </label>
                                         <input
                                             type="file"
                                             accept="image/*,application/pdf"
                                             onChange={(e) => handleFileUpload(e, 'license')}
-                                            className="block w-full text-sm text-slate-500
+                                            className="block w-full text-sm text-slate-500 dark:text-slate-400
                                                 file:mr-4 file:py-2.5 file:px-4
                                                 file:rounded-lg file:border-0
                                                 file:text-sm file:font-bold
-                                                file:bg-blue-50 file:text-blue-700
-                                                hover:file:bg-blue-100
-                                                cursor-pointer border border-slate-200 rounded-lg"
+                                                file:bg-blue-50 dark:file:bg-blue-900/30 file:text-blue-700 dark:file:text-blue-300
+                                                hover:file:bg-blue-100 dark:hover:file:bg-blue-900/50
+                                                cursor-pointer border border-slate-200 dark:border-slate-600 rounded-lg transition-colors"
                                         />
-                                        {errors.licenseFile && <p className="text-red-500 text-xs mt-1">{errors.licenseFile}</p>}
+                                        {errors.licenseFile && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.licenseFile}</p>}
                                     </div>
                                 </div>
                             </div>
-                            <p className="text-[10px] text-slate-400 italic">
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 italic transition-colors">
                                 * Verranno stampati a piè di pagina 2, 4 e 6 sotto il riquadro Note.
                             </p>
                         </div>
@@ -872,13 +893,6 @@ const TT2112Form: React.FC = () => {
                                                     name="daCategoria"
                                                     value={formData.daCategoria}
                                                     error={errors.daCategoria}
-                                                    onChange={handleChange}
-                                                />
-                                                <InputField
-                                                    label="A Cat."
-                                                    name="aCategoria"
-                                                    value={formData.aCategoria}
-                                                    error={errors.aCategoria}
                                                     onChange={handleChange}
                                                 />
                                             </div>
