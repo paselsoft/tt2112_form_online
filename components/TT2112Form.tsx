@@ -985,9 +985,6 @@ const TT2112Form: React.FC = () => {
 
                 {/* Footer Controls */}
                 <div className="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 shrink-0 space-y-3 transition-colors">
-                    <div className="text-center text-[10px] text-slate-400">
-                        v2.0 - Debug Upload
-                    </div>
                     <button
                         onClick={() => setShowCalibration(!showCalibration)}
                         className="w-full flex items-center justify-center gap-2 text-xs font-bold text-slate-500 hover:text-blue-600 mb-2 transition-colors"
