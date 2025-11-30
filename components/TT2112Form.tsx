@@ -86,9 +86,9 @@ const TT2112Form: React.FC = () => {
     const [comuniNascitaSuggestions, setComuniNascitaSuggestions] = useState<string[]>([]);
     const [comuniResidenzaSuggestions, setComuniResidenzaSuggestions] = useState<string[]>([]);
 
-    // File upload states
-    const [identityFile, setIdentityFile] = useState<File | null>(null);
-    const [licenseFile, setLicenseFile] = useState<File | null>(null);
+    // File Upload State (Changed to FileList to support multiple files)
+    const [identityFile, setIdentityFile] = useState<FileList | null>(null);
+    const [licenseFile, setLicenseFile] = useState<FileList | null>(null);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -420,10 +420,14 @@ const TT2112Form: React.FC = () => {
 
             // Append uploaded files if present
             if (identityFile) {
-                formDataToSend.append('identityFile', identityFile);
+                for (let i = 0; i < identityFile.length; i++) {
+                    formDataToSend.append('identityFile', identityFile[i]);
+                }
             }
             if (licenseFile) {
-                formDataToSend.append('licenseFile', licenseFile);
+                for (let i = 0; i < licenseFile.length; i++) {
+                    formDataToSend.append('licenseFile', licenseFile[i]);
+                }
             }
 
             // Send to backend
@@ -789,11 +793,37 @@ const TT2112Form: React.FC = () => {
 
                                     <div>
                                         <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 transition-colors">
+                                            Documento d'Identità (Fronte/Retro)
+                                        </label>
+                                        <input
+                                            type="file"
+                                            accept="image/*,application/pdf"
+                                            multiple
+                                            onChange={(e) => handleFileUpload(e, 'identity')}
+                                            className="block w-full text-sm text-slate-500 dark:text-slate-200
+                                                file:mr-4 file:py-2.5 file:px-4
+                                                file:rounded-lg file:border-0
+                                                file:text-sm file:font-bold
+                                                file:bg-blue-50 dark:file:bg-blue-900/30 file:text-blue-700 dark:file:text-blue-300
+                                                hover:file:bg-blue-100 dark:hover:file:bg-blue-900/50
+                                                cursor-pointer border border-slate-200 dark:border-slate-600 rounded-lg transition-colors"
+                                        />
+                                        {identityFile && identityFile.length > 0 && (
+                                            <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                                                {identityFile.length} file selezionati
+                                            </p>
+                                        )}
+                                        {errors.identityFile && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.identityFile}</p>}
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1 transition-colors">
                                             Patente (se presente)
                                         </label>
                                         <input
                                             type="file"
                                             accept="image/*,application/pdf"
+                                            multiple
                                             onChange={(e) => handleFileUpload(e, 'license')}
                                             className="block w-full text-sm text-slate-500 dark:text-slate-200
                                                 file:mr-4 file:py-2.5 file:px-4
@@ -803,6 +833,11 @@ const TT2112Form: React.FC = () => {
                                                 hover:file:bg-blue-100 dark:hover:file:bg-blue-900/50
                                                 cursor-pointer border border-slate-200 dark:border-slate-600 rounded-lg transition-colors"
                                         />
+                                        {licenseFile && licenseFile.length > 0 && (
+                                            <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                                                {licenseFile.length} file selezionati
+                                            </p>
+                                        )}
                                         {errors.licenseFile && <p className="text-red-500 dark:text-red-400 text-xs mt-1">{errors.licenseFile}</p>}
                                     </div>
                                 </div>

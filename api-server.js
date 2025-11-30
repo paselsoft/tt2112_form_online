@@ -80,8 +80,8 @@ console.log('[SYSTEM] Inizializzazione Server...');
     // Configurazione Multer per gestire upload multipli
     const uploadFields = upload.fields([
       { name: 'pdf', maxCount: 1 },
-      { name: 'identityFile', maxCount: 1 },
-      { name: 'licenseFile', maxCount: 1 }
+      { name: 'identityFile', maxCount: 5 }, // Increased maxCount to allow multiple files (front/back)
+      { name: 'licenseFile', maxCount: 5 }
     ]);
 
     app.post('/api/send-email', uploadFields, async (req, res) => {
@@ -115,16 +115,24 @@ console.log('[SYSTEM] Inizializzazione Server...');
             content: files['pdf'][0].buffer,
           });
         }
-        if (files['identityFile'] && files['identityFile'][0]) {
-          attachments.push({
-            filename: `Documento_Identita_${files['identityFile'][0].originalname}`,
-            content: files['identityFile'][0].buffer,
+
+        // Handle multiple identity files
+        if (files['identityFile']) {
+          files['identityFile'].forEach((file, index) => {
+            attachments.push({
+              filename: `Documento_Identita_${index + 1}_${file.originalname}`,
+              content: file.buffer,
+            });
           });
         }
-        if (files['licenseFile'] && files['licenseFile'][0]) {
-          attachments.push({
-            filename: `Patente_${files['licenseFile'][0].originalname}`,
-            content: files['licenseFile'][0].buffer,
+
+        // Handle multiple license files
+        if (files['licenseFile']) {
+          files['licenseFile'].forEach((file, index) => {
+            attachments.push({
+              filename: `Patente_${index + 1}_${file.originalname}`,
+              content: file.buffer,
+            });
           });
         }
 
