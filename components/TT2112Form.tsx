@@ -470,7 +470,7 @@ const TT2112Form: React.FC = () => {
         <div className="max-w-3xl mx-auto pb-10">
 
             {/* MAIN FORM CARD */}
-            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col transition-colors">
 
                 {/* Header Actions */}
                 <div className="p-4 bg-slate-900 text-white flex items-center justify-between shrink-0 z-10">
@@ -893,7 +893,7 @@ const TT2112Form: React.FC = () => {
                 </div>
 
                 {/* Footer Controls */}
-                <div className="p-4 bg-slate-50 border-t border-slate-200 shrink-0 space-y-3">
+                <div className="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 shrink-0 space-y-3 transition-colors">
                     <button
                         onClick={() => setShowCalibration(!showCalibration)}
                         className="w-full flex items-center justify-center gap-2 text-xs font-bold text-slate-500 hover:text-blue-600 mb-2 transition-colors"
