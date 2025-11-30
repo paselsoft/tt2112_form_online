@@ -532,7 +532,7 @@ const TT2112Form: React.FC = () => {
                                 type="file"
                                 accept="application/pdf"
                                 ref={fileInputRef}
-                                onChange={handleFileChange}
+                                onChange={handleTemplateFileChange}
                                 className="hidden"
                             />
                             <button
@@ -791,15 +791,15 @@ const TT2112Form: React.FC = () => {
                                         </label>
                                         <input
                                             type="file"
-                                            accept="application/pdf"
-                                            onChange={handleTemplateFileChange}
+                                            accept="image/*,application/pdf"
+                                            onChange={(e) => handleFileUpload(e, 'license')}
                                             className="block w-full text-sm text-slate-500
                                                 file:mr-4 file:py-2.5 file:px-4
-                                                file:rounded-full file:border-0
-                                                file:text-sm file:font-semibold
+                                                file:rounded-lg file:border-0
+                                                file:text-sm file:font-bold
                                                 file:bg-blue-50 file:text-blue-700
                                                 hover:file:bg-blue-100
-                                                cursor-pointer"
+                                                cursor-pointer border border-slate-200 rounded-lg"
                                         />
                                         {errors.licenseFile && <p className="text-red-500 text-xs mt-1">{errors.licenseFile}</p>}
                                     </div>
